@@ -31,7 +31,7 @@ if 'registro_inspecciones' not in st.session_state:
     st.session_state.registro_inspecciones = []
 
 # 3. CONEXIÓN DINÁMICA AL INVENTARIO DE GOOGLE SHEETS
-ID_DOCUMENTO = "173jq6AuDOd-1a67IJTrd_kisdtj1sLPvRNyFA0iHXMg"
+ID_DOCUMENTO = "https://docs.google.com/spreadsheets/d/1et_T6dZZWpCc2Q4BMrASdo76mGtIvBLeaBdBR358RS0
 URL_INVENTARIO = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Inventario"
 
 @st.cache_data(ttl="5s")  # Cache ultra corto para que detecte rápido los cambios que hagas en el Excel
