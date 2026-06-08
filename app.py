@@ -51,7 +51,11 @@ def cargar_inventario_dinamico():
                 "puntos": [
                     f"⚠️ **Punto 1:** {fila['Punto1']}",
                     f"⚠️ **Punto 2:** {fila['Punto2']}",
-                    f"⚠️ **Punto 3:** {fila['Punto3']}"
+                    f"⚠️ **Punto 3:** {fila['Punto3']}",
+                     f"⚠️ **Punto 1:** {fila['Punto4']}",
+                    f"⚠️ **Punto 2:** {fila['Punto5']}",
+                    f"⚠️ **Punto 3:** {fila['Punto6']}",
+                    f"⚠️ **Punto 3:** {fila['Punto6']}"
                 ]
             }
         return db_dinamica
