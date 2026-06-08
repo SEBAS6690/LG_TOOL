@@ -31,7 +31,7 @@ if 'registro_inspecciones' not in st.session_state:
     st.session_state.registro_inspecciones = []
 
 # 3. CONEXIÓN DINÁMICA AL INVENTARIO DE GOOGLE SHEETS
-I# 3. CONEXIÓN DINÁMICA AL INVENTARIO DE GOOGLE SHEETS
+# 3. CONEXIÓN DINÁMICA AL INVENTARIO DE GOOGLE SHEETS
 ID_DOCUMENTO = "173jq6AuDOd-1a67IJTrd_kisdtj1sLPvRNyFA0iHXMg"
 URL_INVENTARIO = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Inventario"
 
