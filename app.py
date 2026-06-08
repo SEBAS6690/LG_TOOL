@@ -181,11 +181,11 @@ if codigo_input:
             chk1 = st.checkbox(tool_info["puntos"][0])
             chk2 = st.checkbox(tool_info["puntos"][1])
             chk3 = st.checkbox(tool_info["puntos"][2])
-            chk2 = st.checkbox(tool_info["puntos"][3])
-            chk3 = st.checkbox(tool_info["puntos"][4])
-            chk3 = st.checkbox(tool_info["puntos"][5])
-            chk3 = st.checkbox(tool_info["puntos"][6])
-            chk3 = st.checkbox(tool_info["puntos"][7])
+            chk4 = st.checkbox(tool_info["puntos"][3])
+            chk5 = st.checkbox(tool_info["puntos"][4])
+            chk6 = st.checkbox(tool_info["puntos"][5])
+            chk7 = st.checkbox(tool_info["puntos"][6])
+            
             
             st.write("---")
             comentarios = st.text_input("📝 Notas u observaciones adicionales:", placeholder="Ej. Carcasa en buen estado")
