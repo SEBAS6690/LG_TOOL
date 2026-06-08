@@ -3,7 +3,7 @@ import pandas as pd
 import datetime
 import cv2
 import numpy as np
-from streamlit_gsheets import GSheetsConnection
+import requests
 
 # 1. CONFIGURACIÓN DE LA PÁGINA (Estilo Industrial / Corporativo)
 st.set_page_config(
@@ -26,71 +26,51 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 2. MODIFICACIÓN A: CONEXIÓN A BASE DE DATOS REAL (Google Sheets)
-# ⚠️ REEMPLAZA ESTE ENLACE POR EL DE TU PROPIA HOJA DE CÁLCULO COMPARTIDA
-URL_DRIVE = "https://docs.google.com/spreadsheets/d/1vmBffJbpE4LXZwyInvkWMJCS5Nxp29BBFbFb38NafZ0/edit?usp=sharing" 
-
-conn = st.connection("gsheets", type=GSheetsConnection)
-
-# Intentar leer los datos existentes en el documento de Google Drive para el historial
-try:
-    df_existente = conn.read(spreadsheet=URL_DRIVE, ttl="0d")
-    st.session_state.registro_inspecciones = df_existente.to_dict(orient="records")
-except:
+# 2. HISTORIAL LOCAL TEMPORAL (Para mostrar en pantalla mientras carga)
+if 'registro_inspecciones' not in st.session_state:
     st.session_state.registro_inspecciones = []
 
-# 3. DICCIONARIO MAESTRO CON CAMPOS ASOCIADOS (TAG, Herramienta, Marca, Serial)
+# 3. CONEXIÓN DINÁMICA AL INVENTARIO DE GOOGLE SHEETS
+# Reemplaza el ID de abajo por el ID de tu propio documento de Google Sheets si cambia
+ID_DOCUMENTO = "173jq6AuDOd-1a67IJTrd_kisdtj1sLPvRNyFA0iHXMg"
+URL_INVENTARIO = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Inventario"
 
-# 3. DICCIONARIO MAESTRO DE ACTIVOS (Corregido y Verificado)
-HERRAMIENTAS_DB = {
-    "HERR-AMO-045": {
-        "nombre": "Amoladora Angular de 4.5\"",
-        "categoria": "Corte y Desbaste",
-        "marca": "DeWalt",
-        "serial": "DW-2026-9941X",
-        "imagen": "https://images.unsplash.com/photo-1572981779307-38b8cabb2407?q=80&w=600&auto=format&fit=crop",
-        "puntos": [
-            "⚠️ **Punto 1 (Empuñadura):** ¿La empuñadura auxiliar está instalada, limpia y firme?",
-            "⚠️ **Punto 2 (Guarda):** ¿La carcasa metálica está fija y orientada entre el disco y su mano?",
-            "⚠️ **Punto 3 (Gatillo):** ¿El interruptor 'hombre muerto' se desactiva automáticamente al soltarlo?"
-        ]
-    },
-    "HERR-NEU-075": {
-        "nombre": "Pistola de Impacto Neumática 3/4\"",
-        "categoria": "Ajuste Mecánico / Torque",
-        "marca": "Chicago Pneumatic",
-        "serial": "CP-772H-00542",
-        "imagen": "https://images.unsplash.com/photo-1620917260582-8494b281b376?q=80&w=600&auto=format&fit=crop",
-        "puntos": [
-            "⚠️ **Punto 1 (Retención):** ¿El dado tiene su O-ring y pasador de seguridad colocados?",
-            "⚠️ **Punto 2 (Carcasa/Goma):** ¿El recubrimiento absorbente de vibración en el mango está intacto?",
-            "⚠️ **Punto 3 (Gatillo):** ¿El gatillo se mueve libremente sin atascos mecánicos?"
-        ]
-    },
-    "ELE-TL-001": {
-        "nombre": "Taladro Percutor Industrial",
-        "categoria": "Perforación / Construcción",
-        "marca": "Bosch Heavy Duty",
-        "serial": "BSH-GSB20-8831",
-        "imagen": "https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=600&auto=format&fit=crop",
-        "puntos": [
-            "⚠️ **Punto 1 (Mandril):** ¿El broquero ajusta de forma simétrica y se retiró la llave de apriete?",
-            "⚠️ **Punto 2 (Tope):** ¿La varilla de tope de profundidad está fija para evitar atrapamientos directos?",
-            "⚠️ **Punto 3 (Sentido):** ¿El inversor de marcha cambia con firmeza para evitar contragolpes?"
-        ]
-    }
-}
+@st.cache_data(ttl="10s")  # Se refresca rápido para pruebas del concurso
+def cargar_inventario_dinamico():
+    try:
+        df_inv = pd.read_csv(URL_INVENTARIO)
+        db_dinamica = {}
+        for _, fila in df_inv.iterrows():
+            tag_activo = str(fila['TAG']).strip().upper()
+            db_dinamica[tag_activo] = {
+                "nombre": fila['Nombre'],
+                "categoria": fila['Categoria'],
+                "marca": fila['Marca'],
+                "serial": fila['Serial'],
+                "imagen": fila['Imagen'],
+                "puntos": [
+                    f"⚠️ **Punto 1:** {fila['Punto1']}",
+                    f"⚠️ **Punto 2:** {fila['Punto2']}",
+                    f"⚠️ **Punto 3:** {fila['Punto3']}"
+                ]
+            }
+        return db_dinamica
+    except Exception as e:
+        st.error(f"⚠️ Error al cargar el inventario de Google Sheets: {e}")
+        return {}
+
+# Poblar la base de datos dinámicamente
+HERRAMIENTAS_DB = cargar_inventario_dinamico()
 
 # 4. BARRA LATERAL (SIDEBAR)
 with st.sidebar:
     st.image("https://www.lundingold.com/assets/img/logo.png", width=180)
     st.markdown("### ⚙️ Configuración del Tótem")
     operador = st.text_input("👤 Nombre del Operador / Técnico:", placeholder="Ej. Sebastián Yánez")
-    area_trabajo = st.selectbox("🏢 Área de Destino:", ["Planta de Beneficio", "Mantenimiento Mina", "Talleres Mecánicos", "Subestación Eléctrica"])
+    area_trabajo = st.selectbox("🏢 Área de Destino:", ["Mantenimiento Mina", "Planta de Beneficio", "Talleres Mecánicos", "Subestación Eléctrica"])
     
     st.write("---")
-    st.markdown("### 📊 Métricas de Turno")
-    
+    st.markdown("### 📊 Métricas de Turno Local")
     if st.session_state.registro_inspecciones:
         df_actual = pd.DataFrame(st.session_state.registro_inspecciones)
         aprobados = len(df_actual[df_actual["Estado"] == "APROBADO"])
@@ -131,7 +111,7 @@ if img_file_buffer is not None:
     else:
         st.warning("🔄 Analizando imagen... Asegúrese de enfocar el código QR centrado y con buena luz.")
 
-# Entrada manual alternativa por si falla la cámara o el enfoque
+# Entrada manual alternativa
 codigo_manual = st.text_input("O ingrese el TAG manualmente si es necesario:", value=codigo_escaneado).strip().upper()
 codigo_input = codigo_manual if codigo_manual else codigo_escaneado
 
@@ -143,7 +123,7 @@ if codigo_input:
         st.write("---")
         st.markdown(f"### 🛠️ PASO 2: Ficha Técnica del Activo e Inspección")
         
-        # 📋 TABLA DE ESPECIFICACIONES TÉCNICAS (TAG, Herramienta, Marca, Serial)
+        # Tabla de especificaciones técnicas en pantalla
         col_datos, col_espacio = st.columns([2, 1])
         with col_datos:
             datos_tabla = {
@@ -158,7 +138,11 @@ if codigo_input:
         col_img, col_chk = st.columns([1, 1.2])
         
         with col_img:
-            st.image(tool_info["imagen"], caption=f"Puntos de Control Crítico: {tool_info['nombre']}", use_container_width=True)
+            # Control de error por si el URL de la imagen en Excel está vacío
+            if pd.isna(tool_info["imagen"]) or str(tool_info["imagen"]).strip() == "":
+                st.warning("📷 No hay imagen disponible en la base de datos para esta herramienta.")
+            else:
+                st.image(tool_info["imagen"], caption=f"Puntos de Control Crítico: {tool_info['nombre']}", use_container_width=True)
             
         with col_chk:
             st.markdown("#### Verifique el estado físico y marque las casillas correspondientes:")
@@ -170,106 +154,61 @@ if codigo_input:
             comentarios = st.text_input("📝 Notas u observaciones adicionales:", placeholder="Ej. Mandril sin desgaste aparente")
             
             st.markdown("### 💾 PASO 3: Conclusión del Registro")
-            if st.button("🚀 Enviar Diagnóstico de Seguridad"):
+            
+            # 🔑 LE AGREGAMOS UN KEY ÚNICO PARA EVITAR EL ERROR DE DUPLICADOS
+            if st.button("🚀 Enviar Diagnóstico de Seguridad", key="btn_enviar_diagnose"):
                 if not operador:
                     st.error("❌ Error: Debe ingresar el nombre del operador en la barra lateral para firmar el registro.")
                 else:
                     fecha_hora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
                     
-                    # --- MODIFICACIÓN B (PROCESO DE GUARDADO REAL EN GOOGLE DRIVE) ---
-                    
-                    st.markdown("### 💾 PASO 3: Conclusión del Registro")
-            if st.button("🚀 Enviar Diagnóstico de Seguridad"):
-                if not operador:
-                    st.error("❌ Error: Debe ingresar el nombre del operador en la barra lateral para firmar el registro.")
-                else:
-                    fecha_hora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-                    
-                    # Determinar el estado y detalle según las casillas
                     if chk1 and chk2 and chk3:
                         estado_final = "APROBADO"
                         detalle_final = comentarios if comentarios else "Todo operativo"
-                        
-                        st.markdown(f"""
-                            <div class="success-box">
-                                <h4>✅ ¡CHECK-IN EXITOSO! HERRAMIENTA AUTORIZADA PARA TRABAJO</h4>
-                                <p>El equipo <b>{tool_info['nombre']}</b> (Serial: {tool_info['serial']}) cumple las condiciones de enclavamiento físico.<br>
-                                <b>¡Tus manos están en tus manos!</b> Operación segura habilitada.</p>
-                            </div>
-                        """, unsafe_allow_html=True)
+                        status_html = f"""<div class="success-box"><h4>✅ ¡CHECK-IN EXITOSO! HERRAMIENTA AUTORIZADA PARA TRABAJO</h4><p>El equipo <b>{tool_info['nombre']}</b> cumple las condiciones. ¡Operación segura habilitada!</p></div>"""
                         st.balloons()
                     else:
                         estado_final = "RECHAZADO"
                         detalle_final = f"FALLA CRÍTICA DE SEGURIDAD: {comentarios}"
-                        
-                        st.markdown(f"""
-                            <div class="danger-box">
-                                <h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4>
-                                <p><b>¡No use este equipo!</b> Se ha detectado una no conformidad en los controles críticos de resguardo.<br>
-                                <i>Registro despachado automáticamente al supervisor de SSO del área: {area_trabajo}.</i></p>
-                            </div>
-                        """, unsafe_allow_html=True)
+                        status_html = f"""<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4><p><b>¡No use este equipo!</b> Se ha notificado al supervisor de SSO del área: {area_trabajo}.</p></div>"""
 
-                    # 📋 CREAR EL REGISTRO COMO UNA FILA INDIVIDUAL (Evita el error de estructura)
-                    nuevo_registro = pd.DataFrame([{
-                        "Fecha": fecha_hora, 
-                        "Operador": operador, 
-                        "TAG": codigo_input,
-                        "Herramienta": tool_info['nombre'], 
-                        "Marca": tool_info['marca'], 
-                        "Serial": tool_info['serial'],
-                        "Estado": estado_final, 
-                        "Detalle": detalle_final
-                    }])
+                    st.markdown(status_html, unsafe_allow_html=True)
+
+                    # 🚀 ENVÍO EN TIEMPO REAL A TU GOOGLE FORMS
+                    URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSecO_N06RlShHidRPO3JYuveetxHHqqdOpPHisMeMuTdT5Omw/formResponse"
                     
-                    # 🚀 ENVIAR A GOOGLE SHEETS EN MODO APPEND (SOLUCIÓN AL ERROR)
+                    datos_envio = {
+                        "entry.94170114": fecha_hora,
+                        "entry.1584737127": operador,
+                        "entry.612752579": codigo_input,
+                        "entry.43000870": tool_info['nombre'],
+                        "entry.741366664": tool_info['marca'],
+                        "entry.1913540372": tool_info['serial'],
+                        "entry.2081212052": estado_final,
+                        "entry.19695549": detalle_final
+                    }
+                    
                     try:
-                        conn.create(spreadsheet=URL_DRIVE, data=nuevo_registro, worksheet="Sheet1")
-                        st.success("💾 ¡Registro guardado permanentemente en Google Drive!")
+                        requests.post(URL_FORM, data=datos_envio)
+                        st.success("💾 ¡Registro guardado y sincronizado permanentemente en la base de datos central de Google Sheets!")
                         
-                        # Actualizar la interfaz local añadiendo el registro al inicio de la lista visual
-                        if 'registro_inspecciones' not in st.session_state:
-                            st.session_state.registro_inspecciones = []
-                        st.session_state.registro_inspecciones.insert(0, nuevo_registro.iloc[0].to_dict())
-                        
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"⚠️ Error de conexión con la base de datos: {e}")
-                        
-                        # Actualizar base de datos de Google Sheets
-                        df_actualizado = pd.DataFrame(st.session_state.registro_inspecciones)
-                        conn.update(spreadsheet=URL_DRIVE, data=df_actualizado)
-                        st.rerun()
-                        
-                    else:
-                        st.markdown(f"""
-                            <div class="danger-box">
-                                <h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4>
-                                <p><b>¡No use este equipo!</b> Se ha detectado una no conformidad en los controles críticos de resguardo.<br>
-                                <i>Registro despachado automáticamente al supervisor de SSO del área: {area_trabajo}.</i></p>
-                            </div>
-                        """, unsafe_allow_html=True)
-                        
-                        nuevo_registro = {
+                        # Guardar en el historial visual local del dispositivo
+                        st.session_state.registro_inspecciones.insert(0, {
                             "Fecha": fecha_hora, "Operador": operador, "TAG": codigo_input,
-                            "Herramienta": tool_info['nombre'], "Marca": tool_info['marca'], "Serial": tool_info['serial'],
-                            "Estado": "RECHAZADO", "Detalle": f"FALLA CRÍTICA DE SEGURIDAD: {comentarios}"
-                        }
-                        st.session_state.registro_inspecciones.insert(0, nuevo_registro)
-                        
-                        # Actualizar base de datos de Google Sheets
-                        df_actualizado = pd.DataFrame(st.session_state.registro_inspecciones)
-                        conn.update(spreadsheet=URL_DRIVE, data=df_actualizado)
-                        st.rerun()
+                            "Herramienta": tool_info['nombre'], "Marca": tool_info['marca'], 
+                            "Serial": tool_info['serial'], "Estado": estado_final, "Detalle": detalle_final
+                        })
+                    except Exception as e:
+                        st.error(f"⚠️ Error al conectar con el servidor de base de datos: {e}")
                         
     else:
         st.error("❌ El código escaneado o ingresado no corresponde a ningún activo registrado en el pañol.")
 
-# 7. HISTORIAL CENTRALIZADO DE CONTROL (Se alimenta en tiempo real de Google Sheets)
+# 7. HISTORIAL VISUAL EN PANTALLA
 st.write("---")
-st.markdown("### 📋 Registro Histórico Centralizado (Auditoría en Tiempo Real SSO)")
+st.markdown("### 📋 Registro Histórico de este Turno")
 if st.session_state.registro_inspecciones:
     df_log = pd.DataFrame(st.session_state.registro_inspecciones)
     st.dataframe(df_log, use_container_width=True)
 else:
-    st.info("Aún no existen registros de inspección almacenados en la base de datos de Google Drive.")
+    st.info("Realice una inspección para visualizar el historial local de este dispositivo.")
