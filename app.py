@@ -35,21 +35,13 @@ if 'registro_inspecciones' not in st.session_state:
 ID_DOCUMENTO = "1et_T6dZZWpCc2Q4BMrASdo76mGtIvBLeaBdBR358RS0"
 URL_INVENTARIO = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Inventario"
 
-@st.cache_data(ttl="5s")
+@st.cache_data(ttl="5s")  # Cache ultra corto para que detecte rápido los cambios que hagas en el Excel
 def cargar_inventario_dinamico():
     try:
         df_inv = pd.read_csv(URL_INVENTARIO)
         db_dinamica = {}
         for _, fila in df_inv.iterrows():
             tag_activo = str(fila['TAG']).strip().upper()
-            
-            # Limpiar textos de los puntos por si traen la palabra "Punto" repetida desde Excel
-            p1 = str(fila['Punto1']).replace("Punto 1:", "").replace("Punto1:", "").strip()
-            p2 = str(fila['Punto2']).replace("Punto 2:", "").replace("Punto2:", "").strip()
-            p3 = str(fila['Punto3']).replace("Punto 3:", "").replace("Punto3:", "").strip()
-            p4 = str(fila['Punto4']).replace("Punto 4:", "").replace("Punto4:", "").strip()
-            p5 = str(fila['Punto5']).replace("Punto 5:", "").replace("Punto5:", "").strip()
-            
             db_dinamica[tag_activo] = {
                 "nombre": fila['Nombre'],
                 "categoria": fila['Categoria'],
@@ -57,17 +49,22 @@ def cargar_inventario_dinamico():
                 "serial": fila['Serial'],
                 "imagen": fila['Imagen'],
                 "puntos": [
-                    f"⚠️ **Punto 1:** {p1}",
-                    f"⚠️ **Punto 2:** {p2}",
-                    f"⚠️ **Punto 3:** {p3}",
-                    f"⚠️ **Punto 4:** {p4}",
-                    f"⚠️ **Punto 5:** {p5}"
+                    f"⚠️ **Punto 1:** {fila['Punto1']}",
+                    f"⚠️ **Punto 2:** {fila['Punto2']}",
+                    f"⚠️ **Punto 3:** {fila['Punto3']}",
+                     f"⚠️ **Punto 4:** {fila['Punto4']}",
+                    f"⚠️ **Punto 5:** {fila['Punto5']}",
+                    f"⚠️ **Punto 6:** {fila['Punto6']}",
+                    f"⚠️ **Punto 7:** {fila['Punto7']}"
                 ]
             }
         return db_dinamica
     except Exception as e:
         st.error(f"⚠️ Error al leer la pestaña 'Inventario': {e}")
         return {}
+
+# Poblar el diccionario maestro desde la nube
+HERRAMIENTAS_DB = cargar_inventario_dinamico()
 
 # 4. CONEXIÓN A LAS BASES DE DATOS DE PERSONAL Y RESPUESTAS
 URL_PERSONAL = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Personal"
@@ -186,6 +183,9 @@ if codigo_input:
             chk3 = st.checkbox(tool_info["puntos"][2])
             chk2 = st.checkbox(tool_info["puntos"][3])
             chk3 = st.checkbox(tool_info["puntos"][4])
+            chk3 = st.checkbox(tool_info["puntos"][5])
+            chk3 = st.checkbox(tool_info["puntos"][6])
+            chk3 = st.checkbox(tool_info["puntos"][7])
             
             st.write("---")
             comentarios = st.text_input("📝 Notas u observaciones adicionales:", placeholder="Ej. Carcasa en buen estado")
