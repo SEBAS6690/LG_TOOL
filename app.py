@@ -62,11 +62,42 @@ def cargar_inventario_dinamico():
 # Poblar el diccionario maestro desde la nube
 HERRAMIENTAS_DB = cargar_inventario_dinamico()
 
-# 4. BARRA LATERAL (SIDEBAR)
+
+# 5. PANEL PRINCIPAL (Encabezado)
+st.markdown("""
+    <div class="title-banner">
+        <h2>Programa Concurso "Manos Seguras" — Lundin Gold</h2>
+        <p>Estación Digital de Validation Visual de Herramientas de Potencia antes del Trabajo en Campo</p>
+    </div>
+""", unsafe_allow_html=True)
+# 4. CONEXIÓN Y CARGA DE LA LISTA DE PERSONAL
+URL_PERSONAL = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Personal"
+
+@st.cache_data(ttl="10s")
+def cargar_personal_dinamico():
+    try:
+        df_per = pd.read_csv(URL_PERSONAL)
+        # Extrae los nombres de la columna 'Nombre' y elimina filas vacías
+        lista_nombres = df_per['Nombre'].dropna().astype(str).tolist()
+        return sorted(lista_nombres)
+    except Exception:
+        # Lista de respaldo por si el Excel está vacío o falla el internet
+        return ["Sebastián Yánez", "Víctor Morillo"]
+
+# Cargar el listado de operadores autorizados
+LISTA_OPERADORES = cargar_personal_dinamico()
+
+# BARRA LATERAL (SIDEBAR MODIFICADA)
 with st.sidebar:
     st.image("https://www.lundingold.com/assets/img/logo.png", width=180)
     st.markdown("### ⚙️ Configuración del Tótem")
-    operador = st.text_input("👤 Nombre del Operador / Técnico:", placeholder="Ej. Sebastián Yánez")
+    
+    # 🔄 CAMBIO CRÍTICO: De campo de texto a lista desplegable inteligente
+    operador = st.selectbox(
+        "👤 Nombre del Operador / Técnico:",
+        options=["-- Seleccione un Técnico --"] + LISTA_OPERADORES
+    )
+    
     area_trabajo = st.selectbox("🏢 Área de Destino:", ["Mantenimiento Mina", "Planta de Beneficio", "Talleres Mecánicos", "Subestación Eléctrica"])
     
     st.write("---")
@@ -83,15 +114,6 @@ with st.sidebar:
         st.markdown(f'<div class="metric-card"><h4 style="color:green;">{aprobados}</h4><small>Seguras</small></div>', unsafe_allow_html=True)
     with col_m2:
         st.markdown(f'<div class="metric-card"><h4 style="color:red;">{rechazados}</h4><small>Inseguras</small></div>', unsafe_allow_html=True)
-
-# 5. PANEL PRINCIPAL (Encabezado)
-st.markdown("""
-    <div class="title-banner">
-        <h2>Programa Concurso "Manos Seguras" — Lundin Gold</h2>
-        <p>Estación Digital de Validation Visual de Herramientas de Potencia antes del Trabajo en Campo</p>
-    </div>
-""", unsafe_allow_html=True)
-
 # PASO 1: ESCANEO DE CÓDIGO QR CON LA CÁMARA
 st.markdown("### 🔍 PASO 1: Escaneo de Código QR")
 img_file_buffer = st.camera_input("Enfoque el código QR de la placa de aluminio anodizado")
@@ -202,11 +224,28 @@ if codigo_input:
     else:
         st.error("❌ El código escaneado o ingresado no corresponde a ningún activo registrado en el pañol.")
 
-# 7. HISTORIAL VISUAL EN PANTALLA
+# 7. HISTORIAL VISUAL EN TIEMPO REAL DESDE GOOGLE SHEETS
 st.write("---")
-st.markdown("### 📋 Registro Histórico de este Turno")
-if st.session_state.registro_inspecciones:
-    df_log = pd.DataFrame(st.session_state.registro_inspecciones)
-    st.dataframe(df_log, use_container_width=True)
-else:
-    st.info("Realice una inspección para visualizar el historial local de este dispositivo.")
+st.markdown("### 📋 Registro Histórico de Inspecciones (Tiempo Real)")
+
+# URL automática para leer la pestaña de respuestas
+URL_RESPUESTAS = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%201"
+
+try:
+    # Descarga las respuestas actuales directamente de la nube
+    df_historico = pd.read_csv(URL_RESPUESTAS)
+    
+    if not df_historico.empty:
+        # Ordenar para que la última inspección aparezca primerita en la lista
+        df_historico = df_historico.iloc[::-1]
+        
+        # Mostrar la tabla estilizada en la pantalla del Tótem
+        st.dataframe(
+            df_historico, 
+            use_container_width=True,
+            hide_index=True
+        )
+    else:
+        st.info("📌 Aún no hay registros guardados en la base de datos central.")
+except Exception as e:
+    st.warning("🔄 Cargando actualización del historial... Si tarda, realice una nueva inspección o recargue la página.")
