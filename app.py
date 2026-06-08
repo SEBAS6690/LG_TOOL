@@ -26,16 +26,15 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 2. HISTORIAL LOCAL TEMPORAL (Para mostrar en pantalla mientras carga)
+# 2. HISTORIAL LOCAL TEMPORAL (Métricas rápidas del dispositivo)
 if 'registro_inspecciones' not in st.session_state:
     st.session_state.registro_inspecciones = []
 
 # 3. CONEXIÓN DINÁMICA AL INVENTARIO DE GOOGLE SHEETS
-# Reemplaza el ID de abajo por el ID de tu propio documento de Google Sheets si cambia
 ID_DOCUMENTO = "173jq6AuDOd-1a67IJTrd_kisdtj1sLPvRNyFA0iHXMg"
 URL_INVENTARIO = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Inventario"
 
-@st.cache_data(ttl="10s")  # Se refresca rápido para pruebas del concurso
+@st.cache_data(ttl="5s")  # Cache ultra corto para que detecte rápido los cambios que hagas en el Excel
 def cargar_inventario_dinamico():
     try:
         df_inv = pd.read_csv(URL_INVENTARIO)
@@ -56,10 +55,10 @@ def cargar_inventario_dinamico():
             }
         return db_dinamica
     except Exception as e:
-        st.error(f"⚠️ Error al cargar el inventario de Google Sheets: {e}")
+        st.error(f"⚠️ Error al leer la pestaña 'Inventario': {e}")
         return {}
 
-# Poblar la base de datos dinámicamente
+# Poblar el diccionario maestro desde la nube
 HERRAMIENTAS_DB = cargar_inventario_dinamico()
 
 # 4. BARRA LATERAL (SIDEBAR)
@@ -88,7 +87,7 @@ with st.sidebar:
 st.markdown("""
     <div class="title-banner">
         <h2>Programa Concurso "Manos Seguras" — Lundin Gold</h2>
-        <p>Estación Digital de Validación Visual de Herramientas de Potencia antes del Trabajo en Campo</p>
+        <p>Estación Digital de Validation Visual de Herramientas de Potencia antes del Trabajo en Campo</p>
     </div>
 """, unsafe_allow_html=True)
 
@@ -123,7 +122,7 @@ if codigo_input:
         st.write("---")
         st.markdown(f"### 🛠️ PASO 2: Ficha Técnica del Activo e Inspección")
         
-        # Tabla de especificaciones técnicas en pantalla
+        # Tabla dinámica de especificaciones técnicas
         col_datos, col_espacio = st.columns([2, 1])
         with col_datos:
             datos_tabla = {
@@ -138,11 +137,10 @@ if codigo_input:
         col_img, col_chk = st.columns([1, 1.2])
         
         with col_img:
-            # Control de error por si el URL de la imagen en Excel está vacío
             if pd.isna(tool_info["imagen"]) or str(tool_info["imagen"]).strip() == "":
-                st.warning("📷 No hay imagen disponible en la base de datos para esta herramienta.")
+                st.warning("📷 No hay imagen configurada para esta herramienta en el Excel.")
             else:
-                st.image(tool_info["imagen"], caption=f"Puntos de Control Crítico: {tool_info['nombre']}", use_container_width=True)
+                st.image(tool_info["imagen"], caption=f"Control Crítico: {tool_info['nombre']}", use_container_width=True)
             
         with col_chk:
             st.markdown("#### Verifique el estado físico y marque las casillas correspondientes:")
@@ -151,11 +149,10 @@ if codigo_input:
             chk3 = st.checkbox(tool_info["puntos"][2])
             
             st.write("---")
-            comentarios = st.text_input("📝 Notas u observaciones adicionales:", placeholder="Ej. Mandril sin desgaste aparente")
+            comentarios = st.text_input("📝 Notas u observaciones adicionales:", placeholder="Ej. Carcasa en buen estado")
             
             st.markdown("### 💾 PASO 3: Conclusión del Registro")
             
-            # 🔑 LE AGREGAMOS UN KEY ÚNICO PARA EVITAR EL ERROR DE DUPLICADOS
             if st.button("🚀 Enviar Diagnóstico de Seguridad", key="btn_enviar_diagnose"):
                 if not operador:
                     st.error("❌ Error: Debe ingresar el nombre del operador en la barra lateral para firmar el registro.")
@@ -170,11 +167,11 @@ if codigo_input:
                     else:
                         estado_final = "RECHAZADO"
                         detalle_final = f"FALLA CRÍTICA DE SEGURIDAD: {comentarios}"
-                        status_html = f"""<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4><p><b>¡No use este equipo!</b> Se ha notificado al supervisor de SSO del área: {area_trabajo}.</p></div>"""
+                        status_html = f"""<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4><p><b>¡No use este equipo!</b> Registro despachado automáticamente al supervisor de SSO.</p></div>"""
 
                     st.markdown(status_html, unsafe_allow_html=True)
 
-                    # 🚀 ENVÍO EN TIEMPO REAL A TU GOOGLE FORMS
+                    # 🚀 ENVÍO DIRECTO A TU GOOGLE FORMS REAL
                     URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSecO_N06RlShHidRPO3JYuveetxHHqqdOpPHisMeMuTdT5Omw/formResponse"
                     
                     datos_envio = {
@@ -190,16 +187,16 @@ if codigo_input:
                     
                     try:
                         requests.post(URL_FORM, data=datos_envio)
-                        st.success("💾 ¡Registro guardado y sincronizado permanentemente en la base de datos central de Google Sheets!")
+                        st.success("💾 ¡Sincronizado con la base de datos de Google Sheets!")
                         
-                        # Guardar en el historial visual local del dispositivo
+                        # Agregar al historial de la pantalla actual
                         st.session_state.registro_inspecciones.insert(0, {
                             "Fecha": fecha_hora, "Operador": operador, "TAG": codigo_input,
                             "Herramienta": tool_info['nombre'], "Marca": tool_info['marca'], 
                             "Serial": tool_info['serial'], "Estado": estado_final, "Detalle": detalle_final
                         })
                     except Exception as e:
-                        st.error(f"⚠️ Error al conectar con el servidor de base de datos: {e}")
+                        st.error(f"⚠️ Error al conectar con la base de datos: {e}")
                         
     else:
         st.error("❌ El código escaneado o ingresado no corresponde a ningún activo registrado en el pañol.")
