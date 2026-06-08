@@ -175,7 +175,19 @@ if codigo_input:
                     fecha_hora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
                     
                     # --- MODIFICACIÓN B (PROCESO DE GUARDADO REAL EN GOOGLE DRIVE) ---
+                    
+                    st.markdown("### 💾 PASO 3: Conclusión del Registro")
+            if st.button("🚀 Enviar Diagnóstico de Seguridad"):
+                if not operador:
+                    st.error("❌ Error: Debe ingresar el nombre del operador en la barra lateral para firmar el registro.")
+                else:
+                    fecha_hora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+                    
+                    # Determinar el estado y detalle según las casillas
                     if chk1 and chk2 and chk3:
+                        estado_final = "APROBADO"
+                        detalle_final = comentarios if comentarios else "Todo operativo"
+                        
                         st.markdown(f"""
                             <div class="success-box">
                                 <h4>✅ ¡CHECK-IN EXITOSO! HERRAMIENTA AUTORIZADA PARA TRABAJO</h4>
@@ -184,13 +196,43 @@ if codigo_input:
                             </div>
                         """, unsafe_allow_html=True)
                         st.balloons()
+                    else:
+                        estado_final = "RECHAZADO"
+                        detalle_final = f"FALLA CRÍTICA DE SEGURIDAD: {comentarios}"
                         
-                        nuevo_registro = {
-                            "Fecha": fecha_hora, "Operador": operador, "TAG": codigo_input,
-                            "Herramienta": tool_info['nombre'], "Marca": tool_info['marca'], "Serial": tool_info['serial'],
-                            "Estado": "APROBADO", "Detalle": comentarios if comentarios else "Todo operativo"
-                        }
-                        st.session_state.registro_inspecciones.insert(0, nuevo_registro)
+                        st.markdown(f"""
+                            <div class="danger-box">
+                                <h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4>
+                                <p><b>¡No use este equipo!</b> Se ha detectado una no conformidad en los controles críticos de resguardo.<br>
+                                <i>Registro despachado automáticamente al supervisor de SSO del área: {area_trabajo}.</i></p>
+                            </div>
+                        """, unsafe_allow_html=True)
+
+                    # 📋 CREAR EL REGISTRO COMO UNA FILA INDIVIDUAL (Evita el error de estructura)
+                    nuevo_registro = pd.DataFrame([{
+                        "Fecha": fecha_hora, 
+                        "Operador": operador, 
+                        "TAG": codigo_input,
+                        "Herramienta": tool_info['nombre'], 
+                        "Marca": tool_info['marca'], 
+                        "Serial": tool_info['serial'],
+                        "Estado": estado_final, 
+                        "Detalle": detalle_final
+                    }])
+                    
+                    # 🚀 ENVIAR A GOOGLE SHEETS EN MODO APPEND (SOLUCIÓN AL ERROR)
+                    try:
+                        conn.create(spreadsheet=URL_DRIVE, data=nuevo_registro, worksheet="Sheet1")
+                        st.success("💾 ¡Registro guardado permanentemente en Google Drive!")
+                        
+                        # Actualizar la interfaz local añadiendo el registro al inicio de la lista visual
+                        if 'registro_inspecciones' not in st.session_state:
+                            st.session_state.registro_inspecciones = []
+                        st.session_state.registro_inspecciones.insert(0, nuevo_registro.iloc[0].to_dict())
+                        
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"⚠️ Error de conexión con la base de datos: {e}")
                         
                         # Actualizar base de datos de Google Sheets
                         df_actualizado = pd.DataFrame(st.session_state.registro_inspecciones)
