@@ -66,29 +66,35 @@ def cargar_inventario_dinamico():
 # Poblar el diccionario maestro desde la nube
 HERRAMIENTAS_DB = cargar_inventario_dinamico()
 
-# 4. CONEXIÓN Y CARGA DE LA LISTA DE PERSONAL
+# 4. CONEXIÓN A LAS BASES DE DATOS DE PERSONAL Y RESPUESTAS
 URL_PERSONAL = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Personal"
+URL_RESPUESTAS = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%201"
 
-@st.cache_data(ttl="10s")
+@st.cache_data(ttl="5s")
 def cargar_personal_dinamico():
     try:
         df_per = pd.read_csv(URL_PERSONAL)
-        # Extrae los nombres de la columna 'Nombre' y elimina filas vacías
         lista_nombres = df_per['Nombre'].dropna().astype(str).tolist()
         return sorted(lista_nombres)
     except Exception:
-        # Lista de respaldo por si el Excel está vacío o falla el internet
         return ["Sebastián Yánez", "Víctor Morillo"]
 
-# Cargar el listado de operadores autorizados
+# Cargar el listado de operadores
 LISTA_OPERADORES = cargar_personal_dinamico()
 
-# BARRA LATERAL (SIDEBAR MODIFICADA)
+# Intentar descargar el histórico real para calcular las métricas en vivo
+try:
+    df_historico_real = pd.read_csv(URL_RESPUESTAS)
+    # Estandarizar nombres de columnas a mayúsculas para evitar choques
+    df_historico_real.columns = df_historico_real.columns.str.upper().str.strip()
+except Exception:
+    df_historico_real = pd.DataFrame()
+
+# BARRA LATERAL (SIDEBAR OPTIMIZADA CON MÉTRICAS EN TIEMPO REAL)
 with st.sidebar:
     st.image("https://www.lundingold.com/assets/img/logo.png", width=180)
     st.markdown("### ⚙️ Configuración del Tótem")
     
-    # 🔄 CAMBIO CRÍTICO: De campo de texto a lista desplegable inteligente
     operador = st.selectbox(
         "👤 Nombre del Operador / Técnico:",
         options=["-- Seleccione un Técnico --"] + LISTA_OPERADORES
@@ -97,11 +103,12 @@ with st.sidebar:
     area_trabajo = st.selectbox("🏢 Área de Destino:", ["Mantenimiento Mina", "Planta de Beneficio", "Talleres Mecánicos", "Subestación Eléctrica"])
     
     st.write("---")
-    st.markdown("### 📊 Métricas de Turno Local")
-    if st.session_state.registro_inspecciones:
-        df_actual = pd.DataFrame(st.session_state.registro_inspecciones)
-        aprobados = len(df_actual[df_actual["Estado"] == "APROBADO"])
-        rechazados = len(df_actual[df_actual["Estado"] == "RECHAZADO"])
+    st.markdown("### 📊 Métricas de Turno Real")
+    
+    # 🔄 CONEXIÓN DE MÉTRICAS CORREGIDA (Lectura estricta en Mayúsculas)
+    if not df_historico_real.empty and "ESTADO" in df_historico_real.columns:
+        aprobados = len(df_historico_real[df_historico_real["ESTADO"] == "APROBADO"])
+        rechazados = len(df_historico_real[df_historico_real["ESTADO"] == "RECHAZADO"])
     else:
         aprobados, rechazados = 0, 0
     
@@ -110,7 +117,6 @@ with st.sidebar:
         st.markdown(f'<div class="metric-card"><h4 style="color:green;">{aprobados}</h4><small>Seguras</small></div>', unsafe_allow_html=True)
     with col_m2:
         st.markdown(f'<div class="metric-card"><h4 style="color:red;">{rechazados}</h4><small>Inseguras</small></div>', unsafe_allow_html=True)
-
 # 5. PANEL PRINCIPAL (Encabezado)
 st.markdown("""
     <div class="title-banner">
