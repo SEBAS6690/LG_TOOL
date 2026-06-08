@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import datetime
-import time
 import cv2
 import numpy as np
 
@@ -26,18 +25,20 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 2. BASE DE DATOS SIMULADA
+# 2. BASE DE DATOS SIMULADA INTERNA
 if 'registro_inspecciones' not in st.session_state:
     st.session_state.registro_inspecciones = [
-        {"Fecha": "2026-06-07 07:15", "Operador": "Carlos Mendoza", "ID Herramienta": "HERR-AMO-045", "Equipo": "Amoladora Angular", "Estado": "APROBADO", "Detalle": "Todo operativo"},
-        {"Fecha": "2026-06-07 07:30", "Operador": "Juan Pérez", "ID Herramienta": "HERR-NEU-075", "Equipo": "Pistola de Impacto", "Estado": "RECHAZADO", "Detalle": "Mango agrietado"}
+        {"Fecha": "2026-06-07 07:15", "Operador": "Carlos Mendoza", "TAG": "HERR-AMO-045", "Herramienta": "Amoladora Angular de 4.5\"", "Marca": "DeWalt", "Serial": "DW-2026-9941X", "Estado": "APROBADO", "Detalle": "Todo operativo"},
+        {"Fecha": "2026-06-07 07:30", "Operador": "Juan Pérez", "TAG": "HERR-NEU-075", "Herramienta": "Pistola de Impacto Neumática 3/4\"", "Marca": "Chicago Pneumatic", "Serial": "CP-772H-00542", "Estado": "RECHAZADO", "Detalle": "Falta pasador O-ring"}
     ]
 
-# 3. DICCIONARIO MAESTRO DE HERRAMIENTAS
+# 3. DICCIONARIO MAESTRO CON CAMPOS ASOCIADOS (TAG, Herramienta, Marca, Serial)
 HERRAMIENTAS_DB = {
     "HERR-AMO-045": {
         "nombre": "Amoladora Angular de 4.5\"",
         "categoria": "Corte y Desbaste",
+        "marca": "DeWalt",
+        "serial": "DW-2026-9941X",
         "imagen": "https://images.unsplash.com/photo-1572981779307-38b8cabb2407?q=80&w=600&auto=format&fit=crop",
         "puntos": [
             "⚠️ **Punto 1 (Empuñadura):** ¿La empuñadura auxiliar está instalada, limpia y firme?",
@@ -48,6 +49,8 @@ HERRAMIENTAS_DB = {
     "HERR-NEU-075": {
         "nombre": "Pistola de Impacto Neumática 3/4\"",
         "categoria": "Ajuste Mecánico / Torque",
+        "marca": "Chicago Pneumatic",
+        "serial": "CP-772H-00542",
         "imagen": "https://images.unsplash.com/photo-1620917260582-8494b281b376?q=80&w=600&auto=format&fit=crop",
         "puntos": [
             "⚠️ **Punto 1 (Retención):** ¿El dado tiene su O-ring y pasador de seguridad colocados?",
@@ -57,7 +60,9 @@ HERRAMIENTAS_DB = {
     },
     "HERR-TAL-102": {
         "nombre": "Taladro Percutor Industrial",
-        "categoria": "Perforación",
+        "categoria": "Perforación / Construcción",
+        "marca": "Bosch Heavy Duty",
+        "serial": "BSH-GSB20-8831",
         "imagen": "https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=600&auto=format&fit=crop",
         "puntos": [
             "⚠️ **Punto 1 (Mandril):** ¿El broquero ajusta de forma simétrica y se retiró la llave de apriete?",
@@ -71,11 +76,11 @@ HERRAMIENTAS_DB = {
 with st.sidebar:
     st.image("https://www.lundingold.com/assets/img/logo.png", width=180)
     st.markdown("### ⚙️ Configuración del Tótem")
-    operador = st.text_input("👤 Nombre del Operador / Técnico:", placeholder="Ej. Carlos Mendoza")
+    operador = st.text_input("👤 Nombre del Operador / Técnico:", placeholder="Ej. Sebastián Yánez")
     area_trabajo = st.selectbox("🏢 Área de Destino:", ["Planta de Beneficio", "Mantenimiento Mina", "Talleres Mecánicos", "Subestación Eléctrica"])
     
     st.write("---")
-    st.markdown("### 📊 Métricas")
+    st.markdown("### 📊 Métricas de Turno")
     df_actual = pd.DataFrame(st.session_state.registro_inspecciones)
     aprobados = len(df_actual[df_actual["Estado"] == "APROBADO"])
     rechazados = len(df_actual[df_actual["Estado"] == "RECHAZADO"])
@@ -94,11 +99,9 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# ==================== AQUÍ SE REEMPLAZÓ EL PASO 1 ====================
-st.markdown("### 🔍 PASO 1: Escaneo de Código QR con la Cámara")
-
-# Activación del componente de cámara en vivo
-img_file_buffer = st.camera_input("Enfoque el código QR de la herramienta con la cámara de su dispositivo")
+# PASO 1: ESCANEO DE CÓDIGO QR CON LA CÁMARA
+st.markdown("### 🔍 PASO 1: Escaneo de Código QR")
+img_file_buffer = st.camera_input("Enfoque el código QR de la placa de aluminio anodizado")
 
 codigo_escaneado = ""
 
@@ -113,26 +116,36 @@ if img_file_buffer is not None:
         codigo_escaneado = data.upper().strip()
         st.success(f"✅ ¡Código QR detectado!: `{codigo_escaneado}`")
     else:
-        st.warning("🔄 Buscando código QR... Asegúrese de que haya buena iluminación y enfoque el código de la herramienta.")
+        st.warning("🔄 Analizando imagen... Asegúrese de enfocar el código QR centrado y con buena luz.")
 
-# Alternativa de escritura manual por si falla la cámara o estás en PC sin webcam
-codigo_manual = st.text_input("O ingrese el ID manualmente si no dispone de cámara activa:", value=codigo_escaneado).strip().upper()
+# Entrada manual alternativa por si el dispositivo no cuenta con cámara activa o falla el enfoque
+codigo_manual = st.text_input("O ingrese el TAG manualmente si es necesario:", value=codigo_escaneado).strip().upper()
 codigo_input = codigo_manual if codigo_manual else codigo_escaneado
-# =====================================================================
 
-# 6. PASO 2 Y PASO 3: DETALLE DE VALIDACIÓN
+# 6. PASO 2 Y PASO 3: DETALLE DE VALIDACIÓN E INFORME
 if codigo_input:
     if codigo_input in HERRAMIENTAS_DB:
         tool_info = HERRAMIENTAS_DB[codigo_input]
         
         st.write("---")
-        st.markdown(f"### 🛠️ PASO 2: Inspección Visual Obligatoria — {tool_info['nombre']}")
-        st.info(f"Categoría de Riesgo: **{tool_info['categoria']}** | Inspección enfocada 100% en la protección de dedos y manos.")
+        st.markdown(f"### 🛠️ PASO 2: Ficha Técnica del Activo e Inspección")
+        
+        # 📋 TABLA ASOCIATIVA SOLICITADA (TAG, Herramienta, Marca, Serial)
+        col_datos, col_espacio = st.columns([2, 1])
+        with col_datos:
+            datos_tabla = {
+                "PARÁMETRO INDUSTRIAL": ["TAG / CÓDIGO QR", "HERRAMIENTA / EQUIPO", "MARCA / FABRICANTE", "NÚMERO DE SERIAL", "CATEGORÍA DE RIESGO SSO"],
+                "DETALLES ESPECÍFICOS": [codigo_input, tool_info['nombre'], tool_info['marca'], tool_info['serial'], tool_info['categoria']]
+            }
+            df_ficha = pd.DataFrame(datos_tabla)
+            st.table(df_ficha)
+            
+        st.info("💡 Complete la validación visual obligatoria enfocada en la protección de extremidades superiores.")
         
         col_img, col_chk = st.columns([1, 1.2])
         
         with col_img:
-            st.image(tool_info["imagen"], caption=f"Puntos clave: {tool_info['nombre']}", use_container_width=True)
+            st.image(tool_info["imagen"], caption=f"Puntos de Control Crítico: {tool_info['nombre']}", use_container_width=True)
             
         with col_chk:
             st.markdown("#### Verifique el estado físico y marque las casillas correspondientes:")
@@ -141,48 +154,50 @@ if codigo_input:
             chk3 = st.checkbox(tool_info["puntos"][2])
             
             st.write("---")
-            comentarios = st.text_input("📝 Notas u observaciones adicionales:", placeholder="Ej. Ninguna")
+            comentarios = st.text_input("📝 Notas u observaciones adicionales:", placeholder="Ej. Mandril sin desgaste aparente")
             
             st.markdown("### 💾 PASO 3: Conclusión del Registro")
             if st.button("🚀 Enviar Diagnóstico de Seguridad"):
                 if not operador:
-                    st.error("❌ Error: Debe ingresar el nombre del operador en la barra lateral.")
+                    st.error("❌ Error: Debe ingresar el nombre del operador en la barra lateral para firmar el registro.")
                 else:
                     fecha_hora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
                     
                     if chk1 and chk2 and chk3:
                         st.markdown(f"""
                             <div class="success-box">
-                                <h4>✅ ¡CHECK-IN EXITOSO! HERRAMIENTA AUTORIZADA</h4>
-                                <p>El equipo <b>{tool_info['nombre']}</b> cumple las condiciones para mitigar atrapamientos.<br>
-                                <b>¡Tus manos están en tus manos!</b></p>
+                                <h4>✅ ¡CHECK-IN EXITOSO! HERRAMIENTA AUTORIZADA PARA TRABAJO</h4>
+                                <p>El equipo <b>{tool_info['nombre']}</b> (Serial: {tool_info['serial']}) cumple las condiciones de enclavamiento físico.<br>
+                                <b>¡Tus manos están en tus manos!</b> Operación segura habilitada.</p>
                             </div>
                         """, unsafe_allow_html=True)
                         st.balloons()
                         
                         st.session_state.registro_inspecciones.insert(0, {
-                            "Fecha": fecha_hora, "Operador": operador, "ID Herramienta": codigo_input,
-                            "Equipo": tool_info['nombre'], "Estado": "APROBADO", "Detalle": comentarios if comentarios else "Todo operativo"
+                            "Fecha": fecha_hora, "Operador": operador, "TAG": codigo_input,
+                            "Herramienta": tool_info['nombre'], "Marca": tool_info['marca'], "Serial": tool_info['serial'],
+                            "Estado": "APROBADO", "Detalle": comentarios if comentarios else "Todo operativo"
                         })
                     else:
                         st.markdown(f"""
                             <div class="danger-box">
-                                <h4>❌ ALERTA: HERRAMIENTA BLOQUEADA</h4>
-                                <p><b>¡No use este equipo!</b> Falta un control esencial de protección para sus manos.<br>
-                                <i>Se despachó una notificación automática al supervisor de SSO del área {area_trabajo}.</i></p>
+                                <h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4>
+                                <p><b>¡No use este equipo!</b> Se ha detectado una no conformidad en los controles críticos de resguardo.<br>
+                                <i>Registro despachado automáticamente al supervisor de SSO del área: {area_trabajo}.</i></p>
                             </div>
                         """, unsafe_allow_html=True)
                         
                         st.session_state.registro_inspecciones.insert(0, {
-                            "Fecha": fecha_hora, "Operador": operador, "ID Herramienta": codigo_input,
-                            "Equipo": tool_info['nombre'], "Estado": "RECHAZADO", "Detalle": f"FALLA DE SEGURIDAD: {comentarios}"
+                            "Fecha": fecha_hora, "Operador": operador, "TAG": codigo_input,
+                            "Herramienta": tool_info['nombre'], "Marca": tool_info['marca'], "Serial": tool_info['serial'],
+                            "Estado": "RECHAZADO", "Detalle": f"FALLA CRÍTICA DE SEGURIDAD: {comentarios}"
                         })
                         
     else:
-        st.error("❌ El código ingresado no coincide con ninguna herramienta registrada en el inventario.")
+        st.error("❌ El código escaneado o ingresado no corresponde a ningún activo registrado en el pañol.")
 
-# 7. HISTORIAL
+# 7. HISTORIAL CENTRALIZADO DE CONTROL
 st.write("---")
-st.markdown("### 📋 Registro Histórico de Inspecciones (Módulo Centralizado SSO)")
+st.markdown("### 📋 Registro Histórico Centralizado (Auditoría en Tiempo Real SSO)")
 df_log = pd.DataFrame(st.session_state.registro_inspecciones)
 st.dataframe(df_log, use_container_width=True)
