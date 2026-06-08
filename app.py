@@ -30,7 +30,7 @@ st.markdown("""
 if 'registro_inspecciones' not in st.session_state:
     st.session_state.registro_inspecciones = []
 
-# 3. DICCIONARIO MAESTRO DE ACTIVOS
+# 3. DICCIONARIO MAESTRO DE ACTIVOS# 3. DICCIONARIO MAESTRO DE ACTIVOS (Corregido y Verificado)
 HERRAMIENTAS_DB = {
     "HERR-AMO-045": {
         "nombre": "Amoladora Angular de 4.5\"",
@@ -61,4 +61,11 @@ HERRAMIENTAS_DB = {
         "categoria": "Perforación / Construcción",
         "marca": "Bosch Heavy Duty",
         "serial": "BSH-GSB20-8831",
-        "imagen": "
+        "imagen": "https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=600&auto=format&fit=crop",
+        "puntos": [
+            "⚠️ **Punto 1 (Mandril):** ¿El broquero ajusta de forma simétrica y se retiró la llave de apriete?",
+            "⚠️ **Punto 2 (Tope):** ¿La varilla de tope de profundidad está fija para evitar atrapamientos directos?",
+            "⚠️ **Punto 3 (Sentido):** ¿El inversor de marcha cambia con firmeza para evitar contragolpes?"
+        ]
+    }
+}
