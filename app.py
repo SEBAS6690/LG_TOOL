@@ -62,14 +62,6 @@ def cargar_inventario_dinamico():
 # Poblar el diccionario maestro desde la nube
 HERRAMIENTAS_DB = cargar_inventario_dinamico()
 
-
-# 5. PANEL PRINCIPAL (Encabezado)
-st.markdown("""
-    <div class="title-banner">
-        <h2>Programa Concurso "Manos Seguras" — Lundin Gold</h2>
-        <p>Estación Digital de Validation Visual de Herramientas de Potencia antes del Trabajo en Campo</p>
-    </div>
-""", unsafe_allow_html=True)
 # 4. CONEXIÓN Y CARGA DE LA LISTA DE PERSONAL
 URL_PERSONAL = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Personal"
 
@@ -114,6 +106,15 @@ with st.sidebar:
         st.markdown(f'<div class="metric-card"><h4 style="color:green;">{aprobados}</h4><small>Seguras</small></div>', unsafe_allow_html=True)
     with col_m2:
         st.markdown(f'<div class="metric-card"><h4 style="color:red;">{rechazados}</h4><small>Inseguras</small></div>', unsafe_allow_html=True)
+
+# 5. PANEL PRINCIPAL (Encabezado)
+st.markdown("""
+    <div class="title-banner">
+        <h2>Programa Concurso "Manos Seguras" — Lundin Gold</h2>
+        <p>Estación Digital de Validation Visual de Herramientas de Potencia antes del Trabajo en Campo</p>
+    </div>
+""", unsafe_allow_html=True)
+
 # PASO 1: ESCANEO DE CÓDIGO QR CON LA CÁMARA
 st.markdown("### 🔍 PASO 1: Escaneo de Código QR")
 img_file_buffer = st.camera_input("Enfoque el código QR de la placa de aluminio anodizado")
