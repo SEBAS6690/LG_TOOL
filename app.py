@@ -58,9 +58,9 @@ def cargar_inventario_dinamico():
                     f"⚠️ **Punto 2:** {p2}",
                     f"⚠️ **Punto 3:** {p3}",
                     f"⚠️ **Punto 4:** {p4}",
-                    f"⚠️ **Punto 5:** {p5}"
-                    f"⚠️ **Punto 5:** {p6}"
-                    f"⚠️ **Punto 5:** {p7}"
+                    f"⚠️ **Punto 5:** {p5}",
+                    f"⚠️ **Punto 5:** {p6}",
+                    f"⚠️ **Punto 5:** {p7}",
                 ]
             }
         return db_dinamica
