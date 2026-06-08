@@ -169,12 +169,13 @@ if codigo_input:
                 st.warning("📷 No hay imagen configurada para esta herramienta en el Excel.")
             else:
                 st.image(tool_info["imagen"], caption=f"Control Crítico: {tool_info['nombre']}", use_container_width=True)
-            
-        with col_chk:
+      with col_chk:
             st.markdown("#### Verifique el estado físico y marque las casillas correspondientes:")
             chk1 = st.checkbox(tool_info["puntos"][0])
             chk2 = st.checkbox(tool_info["puntos"][1])
             chk3 = st.checkbox(tool_info["puntos"][2])
+            chk4 = st.checkbox(tool_info["puntos"][3])  # ◄── NUEVO
+            chk5 = st.checkbox(tool_info["puntos"][4])  # ◄── NUEVO
             
             st.write("---")
             comentarios = st.text_input("📝 Notas u observaciones adicionales:", placeholder="Ej. Carcasa en buen estado")
@@ -182,21 +183,29 @@ if codigo_input:
             st.markdown("### 💾 PASO 3: Conclusión del Registro")
             
             if st.button("🚀 Enviar Diagnóstico de Seguridad", key="btn_enviar_diagnose"):
-                if not operador:
-                    st.error("❌ Error: Debe ingresar el nombre del operador en la barra lateral para firmar el registro.")
+                if operador == "-- Seleccione un Técnico --":
+                    st.error("❌ Error: Debe seleccionar su nombre de la lista en la barra lateral para firmar el registro.")
                 else:
                     fecha_hora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
                     
-                    if chk1 and chk2 and chk3:
+                    # 🔄 ACTUALIZA ESTA CONDICIÓN PARA INCLUIR LOS NUEVOS CHECKS
+                    if chk1 and chk2 and chk3 and chk4 and chk5:
                         estado_final = "APROBADO"
                         detalle_final = comentarios if comentarios else "Todo operativo"
-                        status_html = f"""<div class="success-box"><h4>✅ ¡CHECK-IN EXITOSO! HERRAMIENTA AUTORIZADA PARA TRABAJO</h4><p>El equipo <b>{tool_info['nombre']}</b> cumple las condiciones. ¡Operación segura habilitada!</p></div>"""
+                        status_html = f"""<div class="success-box"><h4>✅ ¡CHECK-IN EXITOSO! HERRAMIENTA AUTORIZADA</h4><p>El equipo cumple las condiciones.</p></div>"""
                         st.balloons()
                     else:
                         estado_final = "RECHAZADO"
-                        detalle_final = f"FALLA CRÍTICA DE SEGURIDAD: {comentarios}"
-                        status_html = f"""<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4><p><b>¡No use este equipo!</b> Registro despachado automáticamente al supervisor de SSO.</p></div>"""
-
+                        # Almacena cuáles puntos fallaron de forma automática
+                        fallas = []
+                        if not chk1: fallas.append("Punto 1")
+                        if not chk2: fallas.append("Punto 2")
+                        if not chk3: fallas.append("Punto 3")
+                        if not chk4: fallas.append("Punto 4")
+                        if not chk5: fallas.append("Punto 5")
+                        
+                        detalle_final = f"FALLA CRÍTICA EN: {', '.join(fallas)}. Obs: {comentarios}"
+                        status_html = f"""<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4><p>Reportado a SSO.</p></div>"""
                     st.markdown(status_html, unsafe_allow_html=True)
 
                     # 🚀 ENVÍO DIRECTO A TU GOOGLE FORMS REAL
