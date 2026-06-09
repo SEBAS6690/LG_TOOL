@@ -70,7 +70,6 @@ def cargar_inventario_dinamico():
             tag_activo = str(fila['TAG']).strip().upper()
             lista_puntos = []
             
-            # Barrido elástico del Punto 1 al 10 detectando celdas con texto válido
             for i in range(1, 11):
                 col_name = f"Punto{i}"
                 if col_name in df_inv.columns:
@@ -165,7 +164,6 @@ with col_cam:
             bytes_data = foto_camara.getvalue()
             img_np = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
             
-            # Detector de códigos QR optimizado para OpenCV Headless
             detector_qr = cv2.QRCodeDetector()
             tag_detectado, _, _ = detector_qr.detectAndDecode(img_np)
             
@@ -230,30 +228,29 @@ if codigo_input:
                         detalle_final = f"FALLA CRÍTICA EN: {', '.join(fallas)}. Obs: {comentarios}"
                         status_html = """<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4><p>Equipo fuera de estándar. Reportado a SSO.</p></div>"""
                     
-                    # 🚨 REEMPLAZA ESTA URL CON EL LINK DE TU GOOGLE FORM MORADO TERMINADO EN /formResponse
-                    URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSecO_N06RlShHidRPO3JYuveetxHHqqdOpPHisMeMuTdT5Omw/formResponse"
+                    # 🚨 PEGA AQUÍ LA URL COMPLETA DE TU GOOGLE WEB APP QUE COPIASTE EN EL PASO 1 (MANTÉN LAS COMILLAS)
+                    URL_WEB_APP = "https://script.google.com/macros/s/AKfycbwTKVXcstAii6a7s0S1SNc0q3aluiorGoGbdUBcaLsRGZgILw4Y6sz6cP9BUFfPqv4U2g/exec"
                     
-                    # 🚨 PAYLOAD VERIFICADO CON TU CONSOLA F12 CODFICADO ESTRICTAMENTE EN STRING PLANO
                     datos_envio = {
-                        "entry.2064132338": str(fecha_hora),
-                        "entry.1706240243": str(operador),
-                        "entry.1741634260": str(codigo_input),
-                        "entry.444265005": str(tool_info['nombre']),
-                        "entry.1843195861": str(tool_info['marca']),
-                        "entry.254146747": str(tool_info['serial']),
-                        "entry.2120021665": str(estado_final),
-                        "entry.2001552097": str(detalle_final)
+                        "fecha": str(fecha_hora),
+                        "operador": str(operador),
+                        "tag": str(codigo_input),
+                        "herramienta": str(tool_info['nombre']),
+                        "marca": str(tool_info['marca']),
+                        "serial": str(tool_info['serial']),
+                        "estado": str(estado_final),
+                        "detalle": str(detalle_final)
                     }
                     
                     try:
-                        respuesta = requests.post(URL_FORM, data=datos_envio)
-                        if respuesta.status_code == 200 or respuesta.status_code == 302:
+                        respuesta = requests.post(URL_WEB_APP, data=datos_envio)
+                        if respuesta.status_code == 200:
                             st.markdown(status_html, unsafe_allow_html=True)
-                            st.success("💾 ¡Sincronizado con la base de datos de Google Sheets!")
+                            st.success("💾 ¡Sincronizado directamente con la base de datos de Google Sheets!")
                             st.cache_data.clear()
                             st.rerun()
                         else:
-                            st.error(f"❌ Error de transmisión. Google Forms respondió con código: {respuesta.status_code}")
+                            st.error(f"❌ Error de transmisión. Código de respuesta del servidor: {respuesta.status_code}")
                     except Exception as e:
                         st.error(f"⚠️ Error de conexión: {e}")
     else:
