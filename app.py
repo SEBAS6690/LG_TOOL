@@ -110,8 +110,10 @@ with st.sidebar:
 with st.sidebar:
     st.write("---")
     with st.expander("🛠️ Panel de Control y Gestión de Inventario"):
-        st.markdown("##### 📦 Consulta de Equipos en Inventario")
+        # 🔓 SECCIÓN ABIERTA: VISUALIZACIÓN Y BÚSQUEDA LIBRE CON ÚLTIMA FECHA
+        st.markdown("##### 📦 Consulta de Equipos en Pañol")
         
+        # Buscador dinámico por Serial o TAG (Visible para todos)
         buscar_admin = st.text_input(
             "🔍 Buscar por Serial o TAG:", 
             placeholder="Ej. SN-987654 o HERR-...", 
@@ -120,20 +122,43 @@ with st.sidebar:
         
         try:
             if HERRAMIENTAS_DB:
+                # 1. Convertimos la base de datos de inventario a un DataFrame
                 df_mini_inv = pd.DataFrame.from_dict(HERRAMIENTAS_DB, orient='index').reset_index()
                 df_mini_inv.rename(columns={'index': 'TAG', 'nombre': 'Nombre', 'serial': 'Serial'}, inplace=True)
                 
+                # 2. 🎯 CRUCE DE DATOS: Buscamos la última fecha registrada en el historial para cada TAG
+                ultimas_fechas = {}
+                if not df_historico_real.empty:
+                    # Detectamos dinámicamente las columnas de tu historial (Fecha y TAG)
+                    c_tag_h = [c for c in df_historico_real.columns if 'TAG' in str(c).upper() or 'CÓDIGO' in str(c).upper()][0]
+                    c_fecha_h = [c for c in df_historico_real.columns if 'FECHA' in str(c).upper() or 'TEMPORAL' in str(c).upper()][0]
+                    
+                    # Agrupamos por TAG y obtenemos el último valor de fecha ingresado
+                    df_ultimas = df_historico_real.groupby(c_tag_h)[c_fecha_h].last().reset_index()
+                    ultimas_fechas = dict(zip(df_ultimas[c_tag_h].astype(str).str.upper(), df_ultimas[c_fecha_h]))
+                
+                # Inyectamos las últimas fechas encontradas en la nueva columna de la mini-tabla
+                df_mini_inv['Último Chequeo'] = df_mini_inv['TAG'].map(ultimas_fechas).fillna("Sin registro")
+                
+                # 3. Filtrado instantáneo en caliente si el usuario escribe en el buscador
                 if buscar_admin:
                     df_mini_inv = df_mini_inv[
                         df_mini_inv['Serial'].astype(str).str.upper().str.contains(buscar_admin) | 
                         df_mini_inv['TAG'].astype(str).str.upper().str.contains(buscar_admin)
                     ]
                 
-                st.dataframe(df_mini_inv[["TAG", "Nombre", "Serial"]], hide_index=True, use_container_width=True)
+                # Despliegue de la tabla en la barra lateral con las 4 columnas requeridas
+                st.dataframe(
+                    df_mini_inv[["TAG", "Nombre", "Serial", "Último Chequeo"]], 
+                    hide_index=True, 
+                    use_container_width=True
+                )
+                if buscar_admin:
+                    st.caption(f"💡 Coincidencias encontradas: {len(df_mini_inv)}")
             else:
                 st.info("📌 No se registran equipos en el pañol local.")
-        except Exception:
-            st.error("🔄 Error al cargar la vista previa del inventario.")
+        except Exception as e:
+            st.error("🔄 Error al acoplar las fechas del historial.")
             
         st.write("---")
         st.markdown("##### ➕ Alta de Nuevas Herramientas")
