@@ -140,4 +140,4 @@ with st.sidebar:
     with col_m1:
         st.markdown(f'<div class="metric-card"><h4 style="color:green;">{aprobados}</h4><small>Seguras</small></div>', unsafe_allow_html=True)
     with col_m2:
-        st.markdown(f'<div class="metric-card"><h4 style="
+        st.markdown(f'<div class="metric-card"><h4 style=")
