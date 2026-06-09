@@ -38,36 +38,24 @@ URL_INVENTARIO = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq
 def cargar_inventario_dinamico():
     try:
         df_inv = pd.read_csv(URL_INVENTARIO)
-        
-        # 🧠 BLINDAJE POR ÍNDICE POSICIONAL:
-        # Forzamos la detección de la columna Q (Índice 16 en Python, ya que inicia en 0)
-        col_qr_name = None
-        if len(df_inv.columns) >= 17:
-            col_qr_name = df_inv.columns[16] # Columna Q exacta
-        else:
-            # Si por alguna razón el CSV vino recortado, buscamos por nombre aproximado
-            for c in df_inv.columns:
-                if 'QR' in str(c).upper() or str(c).strip().upper() == 'Q':
-                    col_qr_name = c
-                    break
-
         db_dinamica = {}
         for _, fila in df_inv.iterrows():
-            # Limpieza y estandarización del TAG
-            tag_activo = str(fila['TAG']).strip().upper() if 'TAG' in fila else str(fila.iloc[0]).strip().upper()
-            
-            # Extraer el enlace QR de la columna Q de forma segura
-            enlace_qr = ""
-            if col_qr_name and col_qr_name in fila and pd.notna(fila[col_qr_name]):
-                enlace_qr = str(fila[col_qr_name]).strip()
-            
+            tag_activo = str(fila['TAG']).strip().upper()
             db_dinamica[tag_activo] = {
-                "nombre": fila.get('Nombre', fila.get('HERRAMIENTA', 'No asignado')),
-                "categoria": fila.get('Categoria', fila.get('CATEGORIA', 'No asignado')),
-                "marca": fila.get('Marca', fila.get('MARCA', 'No asignado')),
-                "serial": fila.get('Serial', fila.get('SERIAL', 'No asignado')),
-                "imagen": fila.get('Imagen', fila.get('IMAGEN', '')), 
-                "QR": enlace_qr  # 🎯 Aquí se inyecta el enlace de la columna Q
+                "nombre": fila['Nombre'],
+                "categoria": fila['Categoria'],
+                "marca": fila['Marca'],
+                "serial": fila['Serial'],
+                "imagen": fila['Imagen'],
+                "puntos": [
+                    f"⚠️ **Punto 1:** {fila['Punto1']}",
+                    f"⚠️ **Punto 2:** {fila['Punto2']}",
+                    f"⚠️ **Punto 3:** {fila['Punto3']}",
+                    f"⚠️ **Punto 4:** {fila['Punto4']}",
+                    f"⚠️ **Punto 5:** {fila['Punto5']}",
+                    f"⚠️ **Punto 6:** {fila['Punto6']}",
+                    f"⚠️ **Punto 7:** {fila['Punto7']}"
+                ]
             }
         return db_dinamica
     except Exception as e:
@@ -478,8 +466,8 @@ else:
         except Exception as e:
             st.info("📡 Sincronizando datos maestros... Realice una inspección para inicializar los gráficos.")
 
-    # =========================================================================
-    # 🖨️ AL FINAL ABSOLUTO: NUEVO MÓDULO DE VISUALIZACIÓN E IMPRESIÓN DE QR (COLUMNA Q)
+# =========================================================================
+    # 🖨️ AL FINAL ABSOLUTO: MÓDULO DE IMPRESIÓN REPLICANDO LA FÓRMULA DE GOOGLE
     # =========================================================================
     st.write("---")
     with st.expander("🖨️ Estación de Etiquetado: Ver e Imprimir Códigos QR de Inventario"):
@@ -491,8 +479,8 @@ else:
             
             info_equipo = HERRAMIENTAS_DB[tag_seleccionado]
             
-            # 🎯 JALA DIRECTO LA COLUMNA Q MAPEADA COMO 'QR'
-            url_codigo_qr = info_equipo.get('QR', '')
+            # 🎯 CLONACIÓN DE LA FÓRMULA DE GOOGLE: Replicamos el '& A2' usando el tag seleccionado
+            url_codigo_qr = f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={tag_seleccionado}"
             
             col_info_print, col_preview_qr = st.columns([2, 1])
             with col_info_print:
@@ -502,28 +490,24 @@ else:
                 st.markdown(f"**🛡️ Categoría de Riesgo:** `{info_equipo['categoria']}`")
                 
                 st.write("")
-                if url_codigo_qr and str(url_codigo_qr).strip() != "":
-                    if st.button("🖨️ Enviar a Impresora Térmica", key="btn_trigger_print_final_q", use_container_width=True):
-                        js_printer_command = f"""
-                        <script>
-                            var ventanaImpresion = window.open('', '_blank', 'width=350,height=350');
-                            ventanaImpresion.document.write('<html><head><title>Imprimir QR Lundin</title>');
-                            ventanaImpresion.document.write('<style>body {{ text-align: center; margin: 0; padding: 15px; }} img {{ width: 180px; height: 180px; }} p {{ font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; margin-top: 8px; letter-spacing: 0.5px; }}</style>');
-                            ventanaImpresion.document.write('</head><body>');
-                            ventanaImpresion.document.write('<img src="{url_codigo_qr}" onload="window.print(); window.close();">');
-                            ventanaImpresion.document.write('<p>TAG: {tag_seleccionado}<br>{info_equipo["nombre"]}</p>');
-                            ventanaImpresion.document.write('</body></html>');
-                            ventanaImpresion.document.close();
-                        </script>
-                        """
-                        st.components.v1.html(js_printer_command, height=0, width=0)
-                else:
-                    st.warning("⚠️ Este activo no registra un enlace de código QR válido en la columna Q del archivo maestro.")
+                # Botón industrial para ejecutar la cola de impresión local
+                if st.button("🖨️ Enviar a Impresora Térmica", key="btn_trigger_print_final_q", use_container_width=True):
+                    js_printer_command = f"""
+                    <script>
+                        var ventanaImpresion = window.open('', '_blank', 'width=350,height=350');
+                        ventanaImpresion.document.write('<html><head><title>Imprimir QR Lundin</title>');
+                        ventanaImpresion.document.write('<style>body {{ text-align: center; margin: 0; padding: 15px; }} img {{ width: 180px; height: 180px; }} p {{ font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; margin-top: 8px; letter-spacing: 0.5px; }}</style>');
+                        ventanaImpresion.document.write('</head><body>');
+                        ventanaImpresion.document.write('<img src="{url_codigo_qr}" onload="window.print(); window.close();">');
+                        ventanaImpresion.document.write('<p>TAG: {tag_seleccionado}<br>{info_equipo["nombre"]}</p>');
+                        ventanaImpresion.document.write('</body></html>');
+                        ventanaImpresion.document.close();
+                    </script>
+                    """
+                    st.components.v1.html(js_printer_command, height=0, width=0)
             
             with col_preview_qr:
-                if url_codigo_qr and str(url_codigo_qr).strip() != "":
-                    st.image(url_codigo_qr, caption=f"Vista Previa QR (Col. Q): {tag_seleccionado}", width=140)
-                else:
-                    st.error("❌ QR No Disponible en Columna Q")
+                # Proyectamos en la pantalla de Streamlit la misma imagen que genera tu Sheets
+                st.image(url_codigo_qr, caption=f"QR Sincronizado (Columna Q): {tag_seleccionado}", width=140)
         else:
             st.info("📌 Base de datos de inventario en proceso de sincronización.")
