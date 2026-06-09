@@ -346,7 +346,7 @@ else:
         else:
             st.error("❌ El código escaneado o ingresado no corresponde a ningún activo registrado en el pañol.")
 # ==========================================
-    # 7. DASHBOARD GRÁFICO INTERACTIVO Y REACTIVO (FILTRADO EN CALIENTE)
+    # 7. DASHBOARD REACTIVO + HISTORIAL COMPLETO DE DATOS
     # ==========================================
     st.write("---")
     
@@ -354,12 +354,12 @@ else:
     if 'ver_historial' not in st.session_state:
         st.session_state.ver_historial = False
 
-    # Botón principal con nombre limpio
+    # Botón principal compacto
     if st.button("📊 Historial", key="btn_historial_principal"):
         st.session_state.ver_historial = not st.session_state.ver_historial
         st.rerun()
 
-    # 🔓 Si el botón está activo, se despliega la analítica reactiva
+    # 🔓 Si el botón está activo, se despliega la analítica reactiva sobre la tabla completa
     if st.session_state.ver_historial:
         st.markdown("## 📈 Centro de Analítica Operacional — 'Manos Seguras'")
         
@@ -369,10 +369,7 @@ else:
             col_tag = [c for c in df_historico_real.columns if 'TAG' in str(c).upper() or 'CÓDIGO' in str(c).upper()][0]
             col_ope = [c for c in df_historico_real.columns if 'OPERADOR' in str(c).upper() or 'TÉCNICO' in str(c).upper()][0]
 
-            # ✂️ AISLAMIENTO DE DATOS: Tomamos estrictamente Operador, TAG y Estado
-            df_reducido = df_historico_real[[col_ope, col_tag, col_estado]].copy()
-
-            # CONTROLES DE FILTRADO (Van primero para que controlen todo el dashboard)
+            # CONTROLES DE FILTRADO (Operan sobre la base completa de datos)
             st.markdown("#### 🔍 Filtros de Búsqueda Dinámica")
             col_f1, col_f2 = st.columns(2)
             with col_f1:
@@ -380,17 +377,17 @@ else:
             with col_f2:
                 f_ope = st.text_input("Filtrar por Técnico / Persona:", placeholder="Ej. VÍCTOR", key="f_ope").strip().upper()
 
-            # --- APLICACIÓN DEL FILTRADO EN CALIENTE ---
-            df_filtrado = df_reducido.copy()
+            # --- APLICACIÓN DEL FILTRADO EN CALIENTE EN LA TABLA COMPLETA ---
+            df_filtrado = df_historico_real.copy()
             if f_tag:
                 df_filtrado = df_filtrado[df_filtrado[col_tag].astype(str).str.upper().str.contains(f_tag)]
             if f_ope:
                 df_filtrado = df_filtrado[df_filtrado[col_ope].astype(str).str.upper().str.contains(f_ope)]
-            # --------------------------------------------
+            # ----------------------------------------------------------------
 
-            # 📊 2. CÁLCULO DE MÉTRICAS KPI (Calculadas estrictamente sobre la tabla filtrada)
             total_f = len(df_filtrado)
             if total_f > 0:
+                # 📊 2. CÁLCULO DE MÉTRICAS KPI (Basadas en la tabla filtrada)
                 aprob_f = len(df_filtrado[df_filtrado[col_estado].astype(str).str.upper() == "APROBADO"])
                 rechaz_f = len(df_filtrado[df_filtrado[col_estado].astype(str).str.upper() == "RECHAZADO"])
                 porcentaje_seguro = (aprob_f / total_f) * 100
@@ -408,7 +405,7 @@ else:
 
                 st.write("---")
 
-                # 📈 3. GRÁFICOS INTERACTIVOS (Alimentados de la tabla filtrada)
+                # 📈 3. GRÁFICOS INTERACTIVOS (Se alimentan solo de las 3 variables de la tabla filtrada)
                 st.markdown("### 📈 Gráficos de Comportamiento Filtrado")
                 c1, c2 = st.columns(2)
                 
@@ -426,15 +423,15 @@ else:
                         if col not in chart_data_tag.columns: chart_data_tag[col] = 0
                     st.bar_chart(chart_data_tag[["APROBADO", "RECHAZADO"]], color=["#27AE60", "#CB6155"])
 
-                # 📋 4. DATA FRAME VISUAL SIMPLIFICADO
+                # 📋 4. DATA FRAME VISUAL COMPLETÍSIMO (Muestra absolutamente todas las columnas)
                 st.write("---")
-                st.markdown("#### 📄 Registro de Datos Filtrados (Últimos movimientos primero)")
+                st.markdown("#### 📄 Registro Completo de Datos Filtrados (Últimos movimientos primero)")
                 st.dataframe(
                     df_filtrado.iloc[::-1], 
                     use_container_width=True, 
                     hide_index=True
                 )
-                st.caption(f"💡 Visualizando {total_f} registros que coinciden con los filtros aplicados.")
+                st.caption(f"💡 Visualizando {total_f} registros completos sincronizados con la base de datos.")
                 
             else:
                 st.warning("🔎 No se encontraron registros que coincidan con los filtros aplicados.")
