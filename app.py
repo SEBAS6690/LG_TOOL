@@ -1,23 +1,8 @@
 import streamlit as st
-import subprocess
-import sys
-import os
-
-# 🚀 INYECTOR AUTOMÁTICO DE DEPENDENCIAS PARA CÁMARA Y QR EN LA NUBE
-try:
-    import cv2
-    from pyzbar.pyzbar import decode
-    from PIL import Image
-except ModuleNotFoundError:
-    # 1. Instalar primero los paquetes de Python necesarios
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "opencv-python-headless", "pyzbar", "pillow", "pandas", "requests"])
-    
-    # 2. Truco dinámico: Forzar la recarga de la app para asegurar las importaciones
-    st.rerun()
-
 import pandas as pd
 import datetime
 import requests
+
 # ==========================================
 # 1. CONFIGURACIÓN DE LA PÁGINA Y ESTILOS
 # ==========================================
@@ -70,7 +55,7 @@ URL_PERSONAL = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?t
 URL_RESPUESTAS = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Form_Responses"
 
 # ==========================================
-# 3. CARGA DE INVENTARIO (HASTA 10 PUNTOS)
+# 3. CARGA DE DATA MAESTRA DILIGENTE
 # ==========================================
 @st.cache_data(ttl="5s")
 def cargar_inventario_dinamico():
@@ -152,54 +137,20 @@ with st.sidebar:
         st.markdown(f'<div class="metric-card"><h4 style="color:red;">{rechazados}</h4><small>Inseguras</small></div>', unsafe_allow_html=True)
 
 # ==========================================
-# 5. CUERPO PRINCIPAL - ESCANEO QR ASOCIADO AL TAG
+# 5. CUERPO PRINCIPAL (INTERFAZ DE CONTROL)
 # ==========================================
 st.markdown('# Programa Concurso "Manos Seguras" — Lundin Gold')
 st.markdown('#### Estación Digital de Validación Visual de Herramientas de Potencia antes del Trabajo en Campo')
 st.write("---")
 
-st.markdown("### 📷 PASO 1: Validación por Código QR (Escáner Activo)")
+st.markdown("### 🔍 PASO 1: Ingreso de la Herramienta")
+codigo_input = st.text_input("Digite o escanee el TAG de la herramienta (Ej: ELE-TL-001):", placeholder="Ej: ELE-TL-001").strip().upper()
 
-col_cam, col_manual = st.columns([1.2, 1])
-codigo_input = ""
-
-with col_cam:
-    st.markdown("**Active la cámara, enfoque el QR de la herramienta y presione 'Take Photo':**")
-    # 🎥 Cámara nativa e integrada de Streamlit
-    foto_camara = st.camera_input("Lector de Códigos QR Industrial", key="totem_qr_scanner")
-    
-    if foto_camara is not None:
-        try:
-            # Convertir la captura fotográfica en una matriz compatible con OpenCV
-            bytes_data = foto_camara.getvalue()
-            img_np = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
-            
-            # Procesar el QR por visión artificial para extraer el TAG (ej: ELE-TL-001)
-            detector_qr = cv2.QRCodeDetector()
-            tag_detectado, _, _ = detector_qr.detectAndDecode(img_np)
-            
-            if tag_detectado:
-                codigo_input = str(tag_detectado).strip().upper()
-                st.success(f"🎯 ¡Código QR detectado con éxito! TAG asociado: **{codigo_input}**")
-            else:
-                st.warning("⚠️ No se distinguió un código QR en la imagen. Verifique el enfoque o la iluminación de la placa.")
-        except Exception as e:
-            st.error(f"⚠️ Error al procesar la captura por visión artificial: {e}")
-
-with col_manual:
-    st.markdown("**Respaldo Digital (Digitación Manual):**")
-    codigo_manual = st.text_input("Si la placa QR está obstruida o dañada, digite el TAG manualmente:", placeholder="Ej: ELE-TL-001").strip().upper()
-    
-    if codigo_manual:
-        codigo_input = codigo_manual
-
-# ==========================================
-# 6. GENERACIÓN DINÁMICA DEL FORMULARIO DE CHECKS
-# ==========================================
 if codigo_input:
     if codigo_input in INVENTARIO_HERRAMIENTAS:
         tool_info = INVENTARIO_HERRAMIENTAS[codigo_input]
         
+        st.success(f"✨ ¡Herramienta {codigo_input} identificada con éxito!")
         st.write("---")
         st.markdown("### 📋 PASO 2: Matriz de Control Visual Obligatoria")
         
@@ -212,14 +163,13 @@ if codigo_input:
         with col_chk:
             st.markdown("#### Verifique el estado físico y marque las casillas correspondientes:")
             
-            # Los checkboxes se limpian automáticamente si cambia el TAG escaneado
             checks_estados = []
             for idx, texto_punto in enumerate(tool_info["puntos"]):
                 chk = st.checkbox(texto_punto, key=f"chk_{codigo_input}_{idx}")
                 checks_estados.append((f"Punto {idx+1}", chk))
                 
             st.write("---")
-            comentarios = st.text_input("📝 Notas u observaciones adicionales:", placeholder="Ej. Todo operativo", key=f"obs_{codigo_input}")
+            comentarios = st.text_input("📝 Notas u observaciones adicionales:", placeholder="Ej. Todo conforme", key=f"obs_{codigo_input}")
             
             st.markdown("### 💾 PASO 3: Conclusión del Registro")
             
@@ -241,19 +191,20 @@ if codigo_input:
                         detalle_final = f"FALLA CRÍTICA EN: {', '.join(fallas)}. Obs: {comentarios}"
                         status_html = """<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4><p>Equipo fuera de estándar. Reportado a SSO.</p></div>"""
                     
-                    # 🚨 1. TU ENLACE REAL DE RESPUESTAS DE GOOGLE FORMS
-                    URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSdX_XXXXXXXXXXXX_Pon_Tu_Codigo_Aqui_XXXXXXXXXXXX/formResponse"
+                    # 🚨 1. CORRIGE ESTA URL CON LA DE TU FORMULARIO ACTUAL DE RESPUESTAS.
+                    # Asegúrate de abrir el formulario, hacer clic en "Enviar" -> Enlace largo -> Copiar el ID real.
+                    URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSfD_Xxxxxxxxxx_Coloca_Tu_ID_Correcto_Aqui_xxxxxxxxx/formResponse"
                     
-                    # 🚨 2. COLOQUE AQUÍ SUS CÓDIGOS ENTRY REALES ASOCIADOS A SU TABLA DE EXCEL
+                    # 🚨 2. COLOQUE AQUÍ SUS CÓDIGOS ENTRY OBTENIDOS DESDE LA VISTA PREVIA (F12) DEL FORMULARIO
                     datos_envio = {
-                        "entry.111111111": fecha_hora,             # Columna FECHA
-                        "entry.222222222": operador,               # Columna OPERADOR
-                        "entry.333333333": codigo_input,           # Columna TAG
-                        "entry.444444444": tool_info['nombre'],    # Columna HERRAMIENTA
-                        "entry.555555555": tool_info['marca'],     # Columna MARCA
-                        "entry.666666666": tool_info['serial'],    # Columna SERIAL
-                        "entry.777777777": estado_final,           # Columna ESTADO
-                        "entry.888888888": detalle_final           # Columna DETALLE
+                        "entry.111111111": fecha_hora,             # Asocia a columna FECHA
+                        "entry.222222222": operador,               # Asocia a columna OPERADOR
+                        "entry.333333333": codigo_input,           # Asocia a columna TAG
+                        "entry.444444444": tool_info['nombre'],    # Asocia a columna HERRAMIENTA
+                        "entry.555555555": tool_info['marca'],     # Asocia a columna MARCA
+                        "entry.666666666": tool_info['serial'],    # Asocia a columna SERIAL
+                        "entry.777777777": estado_final,           # Asocia a columna ESTADO
+                        "entry.888888888": detalle_final           # Asocia a columna DETALLE
                     }
                     
                     try:
@@ -264,14 +215,15 @@ if codigo_input:
                             st.cache_data.clear()
                             st.rerun()
                         else:
-                            st.error(f"❌ Error al transmitir datos a Google. Código: {respuesta.status_code}")
+                            st.error(f"❌ Error al enviar. Google Forms respondió con código: {respuesta.status_code}")
+                            st.warning("⚠️ Esto confirma que los códigos 'entry' o la URL del formulario siguen siendo incorrectos. Revísalos usando F12.")
                     except Exception as e:
-                        st.error(f"⚠️ Error de comunicación: {e}")
+                        st.error(f"⚠️ Error de conexión: {e}")
     else:
-        st.error(f"❌ El TAG '{codigo_input}' decodificado no existe en el Inventario Maestro.")
+        st.error(f"❌ Código '{codigo_input}' no encontrado en el Inventario.")
 
 # ==========================================
-# 7. LOG BOOK DIGITAL — BITÁCORA EN TIEMPO REAL
+# 6. LOG BOOK DIGITAL — BITÁCORA EN TIEMPO REAL
 # ==========================================
 st.write("---")
 st.markdown("### 📖 Log Book Digital: Control de Guardia y Turnos")
@@ -301,8 +253,8 @@ if not df_historico_real.empty:
         df_filtrado = df_filtrado[df_filtrado[c_est].astype(str).str.upper() == filtro_estado]
         
     if filtro_area:
-        c_op = columnas_reales.get("OPERADOR", df_historico_real.columns[2])  # Columna 3 (C) según tu imagen
-        c_tag = columnas_reales.get("TAG", df_historico_real.columns[3])       # Columna 4 (D) según tu imagen
+        c_op = columnas_reales.get("OPERADOR", df_historico_real.columns[2])  # Columna 3 (C)
+        c_tag = columnas_reales.get("TAG", df_historico_real.columns[3])       # Columna 4 (D)
         df_filtrado = df_filtrado[
             df_filtrado[c_op].astype(str).str.upper().str.contains(filtro_area) | 
             df_filtrado[c_tag].astype(str).str.upper().str.contains(filtro_area)
