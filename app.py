@@ -116,27 +116,11 @@ with st.sidebar:
 
 # ==========================================
 # ⚙️ MÓDULO: ADMINISTRACIÓN DE INVENTARIO (PROTEGIDO)
+
+
 # ==========================================
-with st.sidebar:
-    st.write("---")
-    with st.expander("🛠️ Panel de Administración (Gestión de Inventario)"):
-        
-        # 🔒 FILTRO DE CONTRASEÑA DE SEGURIDAD
-        # Puedes cambiar "Lundin2026" por la clave de SSO que prefieras
-        CLAVE_ACCESO_CORRECTA = "Lundin2026"  
-        
-        clave_ingresada = st.text_input(
-            "🔑 Ingrese Contraseña Administrador:", 
-            type="password", 
-            placeholder="Clave de seguridad SSO",
-            key="admin_password_lock"
-        )
-        
-        if clave_ingresada == CLAVE_ACCESO_CORRECTA:
-            st.success("🔓 Acceso Concedido")
-            st.write("---")
-            
-            # 📋 SUB-MÓDULO 1: VISUALIZACIÓN Y BÚSQUEDA DEL INVENTARIO ACTUAL
+
+ # 📋 SUB-MÓDULO 1: VISUALIZACIÓN Y BÚSQUEDA DEL INVENTARIO ACTUAL
             st.markdown("##### 📦 Equipos en Base de Datos")
             
             buscar_admin = st.text_input(
@@ -169,6 +153,26 @@ with st.sidebar:
                 st.error("🔄 Error al cargar la vista previa del inventario.")
                 
             st.write("---")
+with st.sidebar:
+    st.write("---")
+    with st.expander("🛠️ Panel de Administración (Gestión de Inventario)"):
+        
+        # 🔒 FILTRO DE CONTRASEÑA DE SEGURIDAD
+        # Puedes cambiar "Lundin2026" por la clave de SSO que prefieras
+        CLAVE_ACCESO_CORRECTA = "Lundin2026"  
+        
+        clave_ingresada = st.text_input(
+            "🔑 Ingrese Contraseña Administrador:", 
+            type="password", 
+            placeholder="Clave de seguridad SSO",
+            key="admin_password_lock"
+        )
+        
+        if clave_ingresada == CLAVE_ACCESO_CORRECTA:
+            st.success("🔓 Acceso Concedido")
+            st.write("---")
+            
+           
             
             # ➕ SUB-MÓDULO 2: REGISTRO DE NUEVAS HERRAMIENTAS
             st.markdown("##### ➕ Registrar Nueva Herramienta o Ítems")
