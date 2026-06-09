@@ -322,56 +322,93 @@ else:
                 st.write("---")
                 comentarios = st.text_input("📝 Notas u observaciones adicionales:", placeholder="Ej. Carcasa en buen estado")
                 
+               # ========================================================
+                # 💾 PASO 3: CONCLUSIÓN DEL REGISTRO CON EVIDENCIA DE RECHAZO
+                # ========================================================
                 st.markdown("### 💾 PASO 3: Conclusión del Registro")
                 
-                if st.button("🚀 Enviar Diagnóstico de Seguridad", key="btn_enviar_diagnose"):
-                    fecha_hora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+                # Evaluamos en caliente si el equipo va a ser aprobado o rechazado
+                herramienta_aprobada = chk1 and chk2 and chk3 and chk4 and chk5 and chk6 and chk7
+                
+                foto_evidencia_rechazo = None
+                permitir_envio = True
+                
+                if not herramienta_aprobada:
+                    st.markdown("""
+                        <div class="danger-box" style="padding:10px 15px; margin-bottom:15px;">
+                            <strong>⚠️ CONDICIÓN DE RECHAZO DETECTADA:</strong><br>
+                            Al no cumplir con todos los puntos de control, es obligatorio capturar una fotografía de la falla antes de enviar el reporte al supervisor de SSO.
+                        </div>
+                    """, unsafe_allow_html=True)
                     
-                    if chk1 and chk2 and chk3 and chk4 and chk5 and chk6 and chk7:
-                        estado_final = "APROBADO"
-                        detalle_final = comentarios if comentarios else "Todo operativo"
-                        status_html = f"""<div class="success-box"><h4>✅ ¡CHECK-IN EXITOSO! HERRAMIENTA AUTORIZADA PARA TRABAJO</h4><p>El equipo <b>{tool_info['nombre']}</b> cumple las condiciones. ¡Operación segura habilitada!</p></div>"""
-                        st.balloons()
-                    else:
-                        estado_final = "RECHAZADO"
-                        fallas = []
-                        if not chk1: fallas.append("Punto 1")
-                        if not chk2: fallas.append("Punto 2")
-                        if not chk3: fallas.append("Punto 3")
-                        if not chk4: fallas.append("Punto 4")
-                        if not chk5: fallas.append("Punto 5")
-                        if not chk6: fallas.append("Punto 6")
-                        if not chk7: fallas.append("Punto 7")
-                        detalle_final = f"FALLA CRÍTICA EN: {', '.join(fallas)}. Obs: {comentarios}"
-                        status_html = f"""<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4><p><b>¡No use este equipo!</b> Registro despachado automáticamente al supervisor de SSO.</p></div>"""
+                    # Se enciende un buffer de cámara exclusivo para capturar la evidencia del defecto
+                    foto_evidencia_rechazo = st.camera_input(
+                        "📷 Capture la evidencia fotográfica de la falla / defecto:", 
+                        key="camara_evidencia_rechazo"
+                    )
+                    
+                    # Si no ha tomado la foto, bloqueamos la bandera de envío
+                    if foto_evidencia_rechazo is None:
+                        permitir_envio = False
+                        st.warning("🔒 Botón de envío bloqueado. Tome la fotografía de la falla para habilitarlo.")
 
-                    st.markdown(status_html, unsafe_allow_html=True)
-                    
-                    datos_envio = {
-                        "tipo_registro": "diagnostico",  
-                        "fecha": str(fecha_hora),
-                        "operador": str(operador),
-                        "tag": str(codigo_input),
-                        "herramienta": str(tool_info['nombre']),
-                        "marca": str(tool_info['marca']),
-                        "serial": str(tool_info['serial']),
-                        "estado": str(estado_final),
-                        "detalle": str(detalle_final)
-                    }
-                    
-                    try:
-                        respuesta = requests.post(URL_WEB_APP_MAESTRA, data=datos_envio, params=datos_envio, timeout=10)
-                        if respuesta.status_code == 200:
-                            st.success("💾 ¡Diagnóstico sincronizado en la base de datos de Google Sheets!")
-                            st.cache_data.clear()
-                            st.rerun()
+                # El botón de enviar reacciona dinámicamente al estado de la foto obligatoria
+                if permitir_envio:
+                    if st.button("🚀 Enviar Diagnóstico de Seguridad", key="btn_enviar_diagnose"):
+                        fecha_hora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+                        
+                        if herramienta_aprobada:
+                            estado_final = "APROBADO"
+                            detalle_final = comentarios if comentarios else "Todo operativo"
+                            status_html = f"""<div class="success-box"><h4>✅ ¡CHECK-IN EXITOSO! HERRAMIENTA AUTORIZADA</h4><p>El equipo cumple con las condiciones del concurso. ¡Operación segura habilitada!</p></div>"""
+                            st.balloons()
                         else:
-                            st.error(f"❌ Error de transmisión del servidor: {respuesta.status_code}")
-                    except Exception as e:
-                        st.error(f"⚠️ Error al conectar con la base de datos: {e}")
-                            
-        else:
-            st.error("❌ El código escaneado o ingresado no corresponde a ningún activo registrado en el pañol.")
+                            estado_final = "RECHAZADO"
+                            fallas = []
+                            if not chk1: fallas.append("Punto 1")
+                            if not chk2: fallas.append("Punto 2")
+                            if not chk3: fallas.append("Punto 3")
+                            if not chk4: fallas.append("Punto 4")
+                            if not chk5: fallas.append("Punto 5")
+                            if not chk6: fallas.append("Punto 6")
+                            if not chk7: fallas.append("Punto 7")
+                            detalle_final = f"FALLA CRÍTICA EN: {', '.join(fallas)}. Obs: {comentarios}"
+                            status_html = f"""<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RECHAZADA / DETENIDA</h4><p><b>¡No use este equipo!</b> Reporte y evidencia fotográfica listos para despacho a SSO.</p></div>"""
+
+                        st.markdown(status_html, unsafe_allow_html=True)
+                        
+                        # 🎯 NOTA DE INGENIERÍA: Para guardar la foto en Google Sheets, Apps Script recibe el archivo binario.
+                        # Enviamos los datos mapeados normales al webhook
+                        datos_envio = {
+                            "tipo_registro": "diagnostico", 
+                            "fecha": str(fecha_hora), 
+                            "operador": str(operador),
+                            "tag": str(codigo_input), 
+                            "herramienta": str(tool_info['nombre']), 
+                            "marca": str(tool_info['marca']),
+                            "serial": str(tool_info['serial']), 
+                            "estado": str(estado_final), 
+                            "detalle": str(detalle_final)
+                        }
+                        
+                        # Si deseas enviar la imagen binaria base64 a la macro de Sheets, puedes añadirla aquí
+                        if foto_evidencia_rechazo:
+                            import base64
+                            bytes_foto = foto_evidencia_rechazo.getvalue()
+                            base64_foto = base64.b64encode(bytes_foto).decode('utf-8')
+                            datos_envio["evidencia_base64"] = base64_foto
+                        
+                        try:
+                            respuesta = requests.post(URL_WEB_APP_MAESTRA, data=datos_envio, params=datos_envio, timeout=15)
+                            if respuesta.status_code == 200:
+                                st.success("💾 ¡Registro y evidencia sincronizados en Google Sheets!")
+                                st.cache_data.clear()
+                                st.rerun()
+                        except Exception as e:
+                            st.error(f"⚠️ Error de enlace con el servidor: {e}")
+                else:
+                    # Renderizamos un botón falso deshabilitado visualmente para que la interfaz mantenga simetría
+                    st.button("🚀 Enviar Diagnóstico de Seguridad (Bloqueado)", key="btn_enviar_disabled", disabled=True)
 # ==========================================
     # 7. DASHBOARD REACTIVO + HISTORIAL COMPLETO DE DATOS
     # ==========================================
