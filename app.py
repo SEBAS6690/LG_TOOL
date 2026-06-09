@@ -2,7 +2,24 @@ import streamlit as st
 import pandas as pd
 import datetime
 import requests
+from streamlit_camera_input_live import camera_input_live
+from PIL import Image
+from pyzbar.pyzbar import decode
+import numpy as np
+def leer_qr(imagen):
+    try:
+        imagen_np = np.array(imagen)
 
+        codigos = decode(imagen_np)
+
+        for codigo in codigos:
+            return codigo.data.decode("utf-8")
+
+        return None
+
+    except Exception as e:
+        st.error(f"Error leyendo QR: {e}")
+        return None
 # ==========================================
 # 1. CONFIGURACIÓN DE LA PÁGINA Y ESTILOS
 # ==========================================
@@ -150,7 +167,34 @@ st.markdown('#### Estación Digital de Validación Visual de Herramientas de Pot
 st.write("---")
 
 st.markdown("### 🔍 PASO 1: Ingreso de la Herramienta")
-codigo_input = st.text_input("Digite o escanee el TAG de la herramienta (Ej: ELE-TL-001):", placeholder="Ej: ELE-TL-001").strip().upper()
+
+col1, col2 = st.columns([2,1])
+
+with col1:
+    codigo_manual = st.text_input(
+        "Digite el TAG de la herramienta:",
+        placeholder="Ej: ELE-TL-001"
+    )
+
+with col2:
+    st.write("📷 Escanear QR")
+    foto = camera_input_live()
+
+codigo_qr = ""
+
+if foto:
+    imagen = Image.open(foto)
+    resultado = leer_qr(imagen)
+
+    if resultado:
+        codigo_qr = resultado
+        st.success(f"QR detectado: {codigo_qr}")
+    else:
+        st.warning("No se encontró un QR válido")
+
+codigo_input = (codigo_qr or codigo_manual).strip().upper()
+
+
 
 if codigo_input:
     if codigo_input in INVENTARIO_HERRAMIENTAS:
