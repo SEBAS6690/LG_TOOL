@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import datetime
 import requests
-from streamlit_camera_input_live import camera_input_live
 from PIL import Image
 from pyzbar.pyzbar import decode
 import numpy as np
+
 def leer_qr(imagen):
     try:
         imagen_np = np.array(imagen)
@@ -178,19 +178,24 @@ with col1:
 
 with col2:
     st.write("📷 Escanear QR")
-    foto = camera_input_live()
+    foto = st.camera_input("Tomar foto del QR")
 
 codigo_qr = ""
 
 if foto:
-    imagen = Image.open(foto)
-    resultado = leer_qr(imagen)
+    try:
+        imagen = Image.open(foto)
 
-    if resultado:
-        codigo_qr = resultado
-        st.success(f"QR detectado: {codigo_qr}")
-    else:
-        st.warning("No se encontró un QR válido")
+        resultado = leer_qr(imagen)
+
+        if resultado:
+            codigo_qr = resultado
+            st.success(f"✅ QR detectado: {codigo_qr}")
+        else:
+            st.warning("⚠️ No se encontró un QR válido")
+
+    except Exception as e:
+        st.error(f"Error leyendo QR: {e}")
 
 codigo_input = (codigo_qr or codigo_manual).strip().upper()
 

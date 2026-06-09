@@ -1,7 +1,7 @@
 streamlit
 pandas
 requests
-streamlit-camera-input-live
-opencv-python-headless
-pyzbar
+numpy
 Pillow
+pyzbar
+opencv-python-headless
