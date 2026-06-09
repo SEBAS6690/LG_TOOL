@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilos visuales del Tótem Industrial para el Concurso
+# Estilos visuales del Tótem Industrial para el Concurso "Manos Seguras"
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
@@ -179,7 +179,7 @@ if codigo_input:
             
             st.markdown("### 💾 PASO 3: Conclusión del Registro")
             
-          if st.button("🚀 Enviar Diagnóstico de Seguridad", key="btn_enviar_diagnose"):
+            if st.button("🚀 Enviar Diagnóstico de Seguridad", key="btn_enviar_diagnose"):
                 if operador == "-- Seleccione un Técnico --":
                     st.error("❌ Error: Debe seleccionar su nombre de la lista en la barra lateral para firmar el registro.")
                 else:
@@ -197,10 +197,10 @@ if codigo_input:
                         detalle_final = f"FALLA CRÍTICA EN: {', '.join(fallas)}. Obs: {comentarios}"
                         status_html = """<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4><p>Equipo fuera de estándar. Reportado a SSO.</p></div>"""
                     
-                    # 🚨 1. REEMPLAZA ESTA URL CON EL ID REAL DE TU FORMULARIO MORADO DE GOOGLE
-                    URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSfD_Xxxxxxxxxx_Coloca_Aqui_El_ID_Real_De_Tu_Formulario/formResponse"
+                    # 🚨 REEMPLAZA ESTA URL CON EL LINK DE TU GOOGLE FORM MORADO TERMINADO EN /formResponse
+                    URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSecO_N06RlShHidRPO3JYuveetxHHqqdOpPHisMeMuTdT5Omw/formResponse"
                     
-                    # 🚨 2. MAQUETA DEFINITIVA CON TUS CODES ENTRY REALES
+                    # 🚨 VERIFICADO CON TU CAPTURA DE PANTALLA DE LA CONSOLA F12
                     datos_envio = {
                         "entry.2064132338": fecha_hora,             # Columna FECHA
                         "entry.1706240243": operador,               # Columna OPERADOR
