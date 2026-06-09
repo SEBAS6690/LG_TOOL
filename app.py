@@ -467,47 +467,75 @@ else:
             st.info("📡 Sincronizando datos maestros... Realice una inspección para inicializar los gráficos.")
 
 # =========================================================================
-    # 🖨️ AL FINAL ABSOLUTO: MÓDULO DE IMPRESIÓN REPLICANDO LA FÓRMULA DE GOOGLE
+    # 🖨️ AL FINAL ABSOLUTO: MÓDULO DE SELECCIÓN Y IMPRESIÓN MASIVA DE QR
     # =========================================================================
     st.write("---")
-    with st.expander("🖨️ Estación de Etiquetado: Ver e Imprimir Códigos QR de Inventario"):
-        st.markdown("##### Buscador de Activos para Impresión Térmica de Placas")
+    with st.expander("🖨️ Estación de Etiquetado Masivo: Imprimir Múltiples QRs en Ráfaga"):
+        st.markdown("##### Panel de Pañol: Selección Múltiple de Etiquetas para Impresión Térmica")
         
         if HERRAMIENTAS_DB:
             lista_tags_disponibles = sorted(list(HERRAMIENTAS_DB.keys()))
-            tag_seleccionado = st.selectbox("Seleccione el TAG del Equipo a Consultar:", lista_tags_disponibles, key="sb_modulo_impresion_final_q")
             
-            info_equipo = HERRAMIENTAS_DB[tag_seleccionado]
+            # 1. Selector rápido: Permitir marcar todos de golpe o ninguno
+            col_sel1, col_sel2 = st.columns([1, 3])
+            with col_sel1:
+                seleccionar_todos = st.checkbox("✅ Seleccionar Todos")
             
-            # 🎯 CLONACIÓN DE LA FÓRMULA DE GOOGLE: Replicamos el '& A2' usando el tag seleccionado
-            url_codigo_qr = f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={tag_seleccionado}"
+            # 2. Multiselect interactivo de Streamlit
+            default_selection = lista_tags_disponibles if seleccionar_todos else []
+            tags_seleccionados = st.multiselect(
+                "Seleccione los TAGs que desea mandar a la ticketera:",
+                options=lista_tags_disponibles,
+                default=default_selection,
+                key="ms_impresion_masiva"
+            )
             
-            col_info_print, col_preview_qr = st.columns([2, 1])
-            with col_info_print:
-                st.markdown(f"**🛠️ Herramienta:** {info_equipo['nombre']}")
-                st.markdown(f"**🏷️ Marca:** {info_equipo['marca']}")
-                st.markdown(f"**🔢 Número de Serial:** `{info_equipo['serial']}`")
-                st.markdown(f"**🛡️ Categoría de Riesgo:** `{info_equipo['categoria']}`")
+            if tags_seleccionados:
+                st.success(f"📋 Elementos listos en cola de impresión: **{len(tags_seleccionados)} herramientas**.")
                 
-                st.write("")
-                # Botón industrial para ejecutar la cola de impresión local
-                if st.button("🖨️ Enviar a Impresora Térmica", key="btn_trigger_print_final_q", use_container_width=True):
-                    js_printer_command = f"""
-                    <script>
-                        var ventanaImpresion = window.open('', '_blank', 'width=350,height=350');
-                        ventanaImpresion.document.write('<html><head><title>Imprimir QR Lundin</title>');
-                        ventanaImpresion.document.write('<style>body {{ text-align: center; margin: 0; padding: 15px; }} img {{ width: 180px; height: 180px; }} p {{ font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; margin-top: 8px; letter-spacing: 0.5px; }}</style>');
-                        ventanaImpresion.document.write('</head><body>');
-                        ventanaImpresion.document.write('<img src="{url_codigo_qr}" onload="window.print(); window.close();">');
-                        ventanaImpresion.document.write('<p>TAG: {tag_seleccionado}<br>{info_equipo["nombre"]}</p>');
-                        ventanaImpresion.document.write('</body></html>');
-                        ventanaImpresion.document.close();
-                    </script>
-                    """
-                    st.components.v1.html(js_printer_command, height=0, width=0)
-            
-            with col_preview_qr:
-                # Proyectamos en la pantalla de Streamlit la misma imagen que genera tu Sheets
-                st.image(url_codigo_qr, caption=f"QR Sincronizado (Columna Q): {tag_seleccionado}", width=140)
+                # Construimos la estructura de datos que se enviará al bloque de impresión
+                cola_impresion = []
+                for tag in tags_seleccionados:
+                    cola_impresion.append({
+                        "tag": tag,
+                        "nombre": HERRAMIENTAS_DB[tag]['nombre'],
+                        "url_qr": f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={tag}"
+                    })
+                
+                col_btn_action, _ = st.columns([1, 2])
+                with col_btn_action:
+                    # Botón maestro de impresión en bloque
+                    if st.button("🖨️ Imprimir Lote Seleccionado", key="btn_execute_print_masivo", use_container_width=True):
+                        
+                        # 🧠 LÓGICA JAVASCRIPT AVANZADA: Genera un documento único con saltos de página CSS (page-break-after)
+                        # Esto hace que cada QR salga en un ticket físico independiente sin colgar la ticketera
+                        html_tickets = ""
+                        for item in cola_impresion:
+                            html_tickets += f"""
+                            <div class="ticket">
+                                <img src="{item['url_qr']}">
+                                <p>TAG: {item['tag']}<br>{item['nombre']}</p>
+                            </div>
+                            """
+                        
+                        js_masivo = f"""
+                        <script>
+                            var winMasiva = window.open('', '_blank', 'width=350,height=500');
+                            winMasiva.document.write('<html><head><title>Impresión Masiva Lundin</title>');
+                            winMasiva.document.write('<style>');
+                            winMasiva.document.write('body {{ text-align: center; margin: 0; padding: 0; }}');
+                            winMasiva.document.write('.ticket {{ padding: 15px; page-break-after: always; text-align: center; }}');
+                            winMasiva.document.write('img {{ width: 160px; height: 160px; }}');
+                            winMasiva.document.write('p {{ font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; margin-top: 6px; line-height: 1.3; }}');
+                            winMasiva.document.write('</style></head><body>');
+                            winMasiva.document.write('{html_tickets}');
+                            winMasiva.document.write('<script>window.onload = function() {{ window.print(); window.close(); }}</script>');
+                            winMasiva.document.write('</body></html>');
+                            winMasiva.document.close();
+                        </script>
+                        """
+                        st.components.v1.html(js_masivo, height=0, width=0)
+            else:
+                st.info("💡 Marque la casilla 'Seleccionar Todos' o elija herramientas específicas del menú desplegable.")
         else:
             st.info("📌 Base de datos de inventario en proceso de sincronización.")
