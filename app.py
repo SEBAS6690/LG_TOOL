@@ -32,6 +32,8 @@ if 'registro_inspecciones' not in st.session_state:
 
 # 3. CONEXIÓN DINÁMICA AL INVENTARIO DE GOOGLE SHEETS
 # 3. CONEXIÓN DINÁMICA AL INVENTARIO DE GOOGLE SHEETS
+# 🚨 2. URL MAESTRA DE TU WEB APP SCRIPT (La única que necesitas para todo)
+URL_WEB_APP_MAESTRA = "https://script.google.com/macros/s/AKfycbx3ApkYqq0X_6JKi5Vz8ZcdnjTpddQKj-XAiis-Klu2EKFY7ONIQurwMe-qWWSURSMG9w/exec"
 ID_DOCUMENTO = "1et_T6dZZWpCc2Q4BMrASdo76mGtIvBLeaBdBR358RS0"
 URL_INVENTARIO = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Inventario"
 
