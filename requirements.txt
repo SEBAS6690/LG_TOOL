@@ -1,4 +1,11 @@
 streamlit
 pandas
+requests
+streamlit-camera-input-live
+opencv-python-headless
+numpy
+
+streamlit
+pandas
 opencv-python-headless
 st-gsheets-connection
