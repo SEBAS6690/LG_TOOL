@@ -179,7 +179,7 @@ if codigo_input:
             
             st.markdown("### 💾 PASO 3: Conclusión del Registro")
             
-            if st.button("🚀 Enviar Diagnóstico de Seguridad", key="btn_enviar_diagnose"):
+          if st.button("🚀 Enviar Diagnóstico de Seguridad", key="btn_enviar_diagnose"):
                 if operador == "-- Seleccione un Técnico --":
                     st.error("❌ Error: Debe seleccionar su nombre de la lista en la barra lateral para firmar el registro.")
                 else:
@@ -197,10 +197,11 @@ if codigo_input:
                         detalle_final = f"FALLA CRÍTICA EN: {', '.join(fallas)}. Obs: {comentarios}"
                         status_html = """<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4><p>Equipo fuera de estándar. Reportado a SSO.</p></div>"""
                     
-                    # 🚨 URL_FORM REAL CONECTADA DE MANERA EXACTA CON TU HOJA DE RESPUESTAS
-                    URL_FORM = f"https://docs.google.com/forms/d/e/{ID_DOCUMENTO}/formResponse"
+                    # 🚨 1. AQUÍ DEBES PEGAR LA URL COMPLETA Y REAL DE TU GOOGLE FORM TERMINADA EN /formResponse
+                    # Abre tu Google Form (diseño morado), dale a "Enviar", copia el enlace corto o largo y cambia "viewform" por "formResponse"
+                    URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSfD_Xxxxxxxxxx_Coloca_Aqui_El_ID_Real_De_Tu_Formulario/formResponse"
                     
-                    # 🚨 MAPEO FINAL CON TUS CÓDIGOS ENTRY REALES DE LA CONSOLA F12
+                    # 🚨 2. TUS CÓDIGOS ENTRY REALES DE LA CAPTURA ANTERIOR (VERIFICADOS)
                     datos_envio = {
                         "entry.2064132338": fecha_hora,             # Columna FECHA
                         "entry.1706240243": operador,               # Columna OPERADOR
@@ -214,7 +215,8 @@ if codigo_input:
                     
                     try:
                         respuesta = requests.post(URL_FORM, data=datos_envio)
-                        if respuesta.status_code == 200:
+                        # Google Forms suele responder con status 200 o 302 si el envío fue exitoso
+                        if respuesta.status_code in [200, 302]:
                             st.markdown(status_html, unsafe_allow_html=True)
                             st.success("💾 ¡Sincronizado con la base de datos de Google Sheets!")
                             st.cache_data.clear()
