@@ -5,7 +5,6 @@ import requests
 import cv2
 import numpy as np
 
-
 # ==========================================
 # 1. CONFIGURACIÓN DE LA PÁGINA Y ESTILOS
 # ==========================================
@@ -16,7 +15,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilos CSS Avanzados para el Tótem Industrial
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
@@ -50,16 +48,16 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. CONEXIÓN MAESTRA A GOOGLE SHEETS (ID FIJO)
+# 2. CONEXIÓN MAESTRA A GOOGLE SHEETS
 # ==========================================
 ID_DOCUMENTO = "1et_T6dZZWpCc2Q4BMrASdo76mGtIvBLeaBdBR358RS0"
 
 URL_INVENTARIO = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Inventario"
 URL_PERSONAL = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Personal"
-URL_RESPUESTAS = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%201"
+URL_RESPUESTAS = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Form_Responses"
 
 # ==========================================
-# 3. CARGA DE INVENTARIO DINÁMICO (HASTA 10 PUNTOS)
+# 3. CARGA DE INVENTARIO (HASTA 10 PUNTOS)
 # ==========================================
 @st.cache_data(ttl="5s")
 def cargar_inventario_dinamico():
@@ -75,7 +73,6 @@ def cargar_inventario_dinamico():
                 col_name = f"Punto{i}"
                 if col_name in df_inv.columns:
                     valor_punto = str(fila[col_name]).strip()
-                    valor_punto = valor_punto.replace(f"Punto {i}:", "").replace(f"Punto{i}:", "").strip()
                     if valor_punto and valor_punto.lower() != 'nan' and valor_punto != '':
                         lista_puntos.append(f"⚠️ **Punto {i}:** {valor_punto}")
             
@@ -92,9 +89,6 @@ def cargar_inventario_dinamico():
         st.error(f"⚠️ Error al leer la pestaña 'Inventario': {e}")
         return {}
 
-# ==========================================
-# 4. CARGA DE PERSONAL Y CONTROLES DEL HISTÓRICO
-# ==========================================
 @st.cache_data(ttl="5s")
 def cargar_personal_dinamico():
     try:
@@ -114,7 +108,7 @@ except Exception:
     df_historico_real = pd.DataFrame()
 
 # ==========================================
-# 5. BARRA LATERAL (CONFIGURACIÓN Y MÉTRICAS)
+# 4. BARRA LATERAL (CONFIGURACIÓN Y MÉTRICAS)
 # ==========================================
 with st.sidebar:
     st.image("https://www.lundingold.com/assets/img/logo.png", width=180)
@@ -125,7 +119,7 @@ with st.sidebar:
         options=["-- Seleccione un Técnico --"] + LISTA_OPERADORES
     )
     
-    area_trabajo = st.selectbox("🏢 Área de Destino:", ["Electricos", "Mecanicos", "Contratista", "Subestación Eléctrica"])
+    area_trabajo = st.selectbox("🏢 Área de Destino:", ["Mantenimiento Mina", "Planta de Beneficio", "Talleres Mecánicos", "Subestación Eléctrica"])
     
     st.write("---")
     st.markdown("### 📊 Métricas de Turno Real")
@@ -144,48 +138,8 @@ with st.sidebar:
     with col_m2:
         st.markdown(f'<div class="metric-card"><h4 style="color:red;">{rechazados}</h4><small>Inseguras</small></div>', unsafe_allow_html=True)
 
-    # PANEL DE ADMINISTRACIÓN INTERNO
-    st.write("---")
-    with st.expander("🛠️ Panel de Administración (Añadir Equipos)"):
-        st.markdown("##### Registrar Nueva Herramienta")
-        nuevo_tag = st.text_input("TAG:", placeholder="Ej. HERR-AMO-046").strip().upper()
-        nuevo_nombre = st.text_input("Nombre:", placeholder="Ej. Amoladora Angular 7\"")
-        nueva_marca = st.text_input("Marca:", placeholder="Bosch")
-        nuevo_serial = st.text_input("Serial:", placeholder="SN-987654")
-        nueva_img = st.text_input("URL Imagen:", placeholder="https://...")
-        
-        st.markdown("**Puntos de Inspección:**")
-        admin_puntos = []
-        for p_idx in range(1, 11):
-            p_val = st.text_input(f"Punto {p_idx}:", placeholder=f"Control crítico {p_idx}", key=f"admin_p_{p_idx}")
-            admin_puntos.append(p_val)
-
-        if st.button("➕ Guardar en Inventario Maestro", key="btn_guardar_nuevo_item"):
-            if not nuevo_tag or not nuevo_nombre:
-                st.error("❌ El TAG y el Nombre son requeridos.")
-            else:
-                URL_FORM_INVENTARIO = "https://docs.google.com/forms/d/e/TU_CODIGO_DE_FORM_DE_INVENTARIO/formResponse"
-                datos_inventario = {
-                    "entry.111111111": nuevo_tag, "entry.222222222": nuevo_nombre,
-                    "entry.333333333": nueva_marca, "entry.444444444": nuevo_serial,
-                    "entry.555555555": nueva_img, "entry.666666666": admin_puntos[0],
-                    "entry.777777777": admin_puntos[1], "entry.888888888": admin_puntos[2],
-                    "entry.999999999": admin_puntos[3], "entry.000000000": admin_puntos[4],
-                    "entry.121212121": admin_puntos[5], "entry.131313131": admin_puntos[6],
-                    "entry.141414141": admin_puntos[7], "entry.151515151": admin_puntos[8],
-                    "entry.161616161": admin_puntos[9]
-                }
-                try:
-                    respuesta = requests.post(URL_FORM_INVENTARIO, data=datos_inventario)
-                    if respuesta.status_code == 200:
-                        st.success(f"✅ ¡{nuevo_tag} guardado!")
-                        st.cache_data.clear()
-                        st.rerun()
-                except Exception as e:
-                    st.error(f"⚠️ Error: {e}")
-
 # ==========================================
-# 6. CUERPO PRINCIPAL - ESCANEO DE QR EN VIVO
+# 5. CUERPO PRINCIPAL - ESCANEO QR ASOCIADO AL TAG
 # ==========================================
 st.markdown('# Programa Concurso "Manos Seguras" — Lundin Gold')
 st.markdown('#### Estación Digital de Validación Visual de Herramientas de Potencia antes del Trabajo en Campo')
@@ -193,48 +147,46 @@ st.write("---")
 
 st.markdown("### 📷 PASO 1: Validación por Código QR (Escáner Activo)")
 
-# Columnas para organizar el lector de cámara y el respaldo manual
 col_cam, col_manual = st.columns([1.2, 1])
-
-# Inicializar la variable del código a buscar
 codigo_input = ""
 
 with col_cam:
-    st.markdown("**Active su cámara y capture el código QR de la herramienta:**")
-    # 🎥 CÁMARA NATIVA DE STREAMLIT (Ultraestable, compatible con todo)
-    foto_camara = st.camera_input("Enfoque el QR y presione 'Take Photo'", key="lector_camara_nativo")
+    st.markdown("**Active la cámara, enfoque el QR de la herramienta y presione 'Take Photo':**")
+    # 🎥 Cámara nativa e integrada de Streamlit
+    foto_camara = st.camera_input("Lector de Códigos QR Industrial", key="totem_qr_scanner")
     
     if foto_camara is not None:
         try:
-            # Convertir la foto tomada por el operario en matriz para OpenCV
+            # Convertir la captura fotográfica en una matriz compatible con OpenCV
             bytes_data = foto_camara.getvalue()
             img_np = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
             
-            # Decodificador de QR por Visión Artificial
+            # Procesar el QR por visión artificial para extraer el TAG (ej: ELE-TL-001)
             detector_qr = cv2.QRCodeDetector()
             tag_detectado, _, _ = detector_qr.detectAndDecode(img_np)
             
             if tag_detectado:
                 codigo_input = str(tag_detectado).strip().upper()
-                st.success(f"🎯 ¡Código detectado con éxito: **{codigo_input}**!")
+                st.success(f"🎯 ¡Código QR detectado con éxito! TAG asociado: **{codigo_input}**")
             else:
-                st.warning("⚠️ No se detectó un código QR válido en la foto. Intente enfocar mejor o use el respaldo manual.")
+                st.warning("⚠️ No se distinguió un código QR en la imagen. Verifique el enfoque o la iluminación de la placa.")
         except Exception as e:
-            st.error(f"Error al procesar la imagen: {e}")
+            st.error(f"⚠️ Error al procesar la captura por visión artificial: {e}")
 
 with col_manual:
-    st.markdown("**Respaldo de Teclado (Si la cámara está sucia o dañada):**")
-    codigo_manual = st.text_input("Digite el TAG manualmente si es necesario:", placeholder="Ej: ELE-TL-002").strip().upper()
+    st.markdown("**Respaldo Digital (Digitación Manual):**")
+    codigo_manual = st.text_input("Si la placa QR está obstruida o dañada, digite el TAG manualmente:", placeholder="Ej: ELE-TL-001").strip().upper()
     
     if codigo_manual:
-        codigo_input = codigo_manual   
-   
-# Procesamiento de la Herramienta Escaneada
+        codigo_input = codigo_manual
+
+# ==========================================
+# 6. GENERACIÓN DINÁMICA DEL FORMULARIO DE CHECKS
+# ==========================================
 if codigo_input:
     if codigo_input in INVENTARIO_HERRAMIENTAS:
         tool_info = INVENTARIO_HERRAMIENTAS[codigo_input]
         
-        st.success(f"✨ ¡Herramienta {codigo_input} identificada con éxito!")
         st.write("---")
         st.markdown("### 📋 PASO 2: Matriz de Control Visual Obligatoria")
         
@@ -247,15 +199,14 @@ if codigo_input:
         with col_chk:
             st.markdown("#### Verifique el estado físico y marque las casillas correspondientes:")
             
+            # Los checkboxes se limpian automáticamente si cambia el TAG escaneado
             checks_estados = []
             for idx, texto_punto in enumerate(tool_info["puntos"]):
-                # 💡 TRUCO CLAVE: Al incluir 'codigo_input' en la 'key', los checks se limpian 
-                # automáticamente cada vez que cambia el TAG de la herramienta escaneada.
                 chk = st.checkbox(texto_punto, key=f"chk_{codigo_input}_{idx}")
                 checks_estados.append((f"Punto {idx+1}", chk))
                 
             st.write("---")
-            comentarios = st.text_input("📝 Notas u observaciones adicionales:", placeholder="Ej. Carcasa limpia y dial de velocidad óptimo", key=f"obs_{codigo_input}")
+            comentarios = st.text_input("📝 Notas u observaciones adicionales:", placeholder="Ej. Todo operativo", key=f"obs_{codigo_input}")
             
             st.markdown("### 💾 PASO 3: Conclusión del Registro")
             
@@ -277,37 +228,35 @@ if codigo_input:
                         detalle_final = f"FALLA CRÍTICA EN: {', '.join(fallas)}. Obs: {comentarios}"
                         status_html = """<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4><p>Equipo fuera de estándar. Reportado a SSO.</p></div>"""
                     
-                    # 🚨 1. TU URL DE GOOGLE FORMS (Debe terminar estrictamente en /formResponse)
+                    # 🚨 1. TU ENLACE REAL DE RESPUESTAS DE GOOGLE FORMS
                     URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSdX_XXXXXXXXXXXX_Pon_Tu_Codigo_Aqui_XXXXXXXXXXXX/formResponse"
                     
-                    # 🚨 2. TUS CODES 'entry' QUE OBTUVISTE CON F12 EN GOOGLE FORMS
+                    # 🚨 2. COLOQUE AQUÍ SUS CÓDIGOS ENTRY REALES ASOCIADOS A SU TABLA DE EXCEL
                     datos_envio = {
-                        "entry.111111111": fecha_hora,             # Fecha
-                        "entry.222222222": operador,               # Operador / Técnico
-                        "entry.333333333": codigo_input,           # TAG
-                        "entry.444444444": tool_info['nombre'],    # Herramienta
-                        "entry.555555555": tool_info['marca'],     # Marca
-                        "entry.666666666": tool_info['serial'],    # Serial
-                        "entry.777777777": estado_final,           # Estado (APROBADO/RECHAZADO)
-                        "entry.888888888": detalle_final           # Detalle / Fallas
+                        "entry.111111111": fecha_hora,             # Columna FECHA
+                        "entry.222222222": operador,               # Columna OPERADOR
+                        "entry.333333333": codigo_input,           # Columna TAG
+                        "entry.444444444": tool_info['nombre'],    # Columna HERRAMIENTA
+                        "entry.555555555": tool_info['marca'],     # Columna MARCA
+                        "entry.666666666": tool_info['serial'],    # Columna SERIAL
+                        "entry.777777777": estado_final,           # Columna ESTADO
+                        "entry.888888888": detalle_final           # Columna DETALLE
                     }
                     
                     try:
                         respuesta = requests.post(URL_FORM, data=datos_envio)
-                        
                         if respuesta.status_code == 200:
                             st.markdown(status_html, unsafe_allow_html=True)
                             st.success("💾 ¡Sincronizado con la base de datos de Google Sheets!")
-                            
-                            # Limpiar la memoria caché para forzar la lectura del nuevo registro en el Log Book
                             st.cache_data.clear()
-                            
-                            # Forzar recarga limpia de la app para vaciar los campos de texto
                             st.rerun()
                         else:
-                            st.error(f"❌ Error al enviar. Google Forms respondió con el código: {respuesta.status_code}")
+                            st.error(f"❌ Error al transmitir datos a Google. Código: {respuesta.status_code}")
                     except Exception as e:
-                        st.error(f"⚠️ Error de conexión: {e}")
+                        st.error(f"⚠️ Error de comunicación: {e}")
+    else:
+        st.error(f"❌ El TAG '{codigo_input}' decodificado no existe en el Inventario Maestro.")
+
 # ==========================================
 # 7. LOG BOOK DIGITAL — BITÁCORA EN TIEMPO REAL
 # ==========================================
@@ -339,8 +288,8 @@ if not df_historico_real.empty:
         df_filtrado = df_filtrado[df_filtrado[c_est].astype(str).str.upper() == filtro_estado]
         
     if filtro_area:
-        c_op = columnas_reales.get("OPERADOR", df_historico_real.columns[1])
-        c_tag = columnas_reales.get("TAG", df_historico_real.columns[2])
+        c_op = columnas_reales.get("OPERADOR", df_historico_real.columns[2])  # Columna 3 (C) según tu imagen
+        c_tag = columnas_reales.get("TAG", df_historico_real.columns[3])       # Columna 4 (D) según tu imagen
         df_filtrado = df_filtrado[
             df_filtrado[c_op].astype(str).str.upper().str.contains(filtro_area) | 
             df_filtrado[c_tag].astype(str).str.upper().str.contains(filtro_area)
@@ -350,6 +299,5 @@ if not df_historico_real.empty:
 
     if not df_log_book.empty:
         st.dataframe(df_log_book, use_container_width=True, hide_index=True)
-        st.caption(f"🔹 Mostrando {len(df_log_book)} registros en la bitácora actual.")
 else:
-    st.info("📌 El Log Book se encuentra vacío. Registre la primera herramienta para iniciar la bitácora.")
+    st.info("📌 El Log Book se encuentra vacío.")
