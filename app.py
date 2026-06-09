@@ -14,7 +14,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilos visuales del Tótem Industrial para el Concurso "Manos Seguras"
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
@@ -57,7 +56,7 @@ URL_PERSONAL = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?t
 URL_RESPUESTAS = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Form_Responses"
 
 # ==========================================
-# 3. CARGA DE DATOS DINÁMICOS (HASTA 10 PUNTOS)
+# 3. CARGA DE DATOS DINÁMICOS
 # ==========================================
 @st.cache_data(ttl="3s")
 def cargar_inventario_dinamico():
@@ -109,7 +108,7 @@ except Exception:
     df_historico_real = pd.DataFrame()
 
 # ==========================================
-# 4. BARRA LATERAL (CONFIGURACIÓN Y MÉTRICAS)
+# 4. BARRA LATERAL
 # ==========================================
 with st.sidebar:
     st.image("https://www.lundingold.com/assets/img/logo.png", width=180)
@@ -143,7 +142,7 @@ with st.sidebar:
         st.markdown(f'<div class="metric-card"><h4 style="color:red;">{rechazados}</h4><small>Inseguras</small></div>', unsafe_allow_html=True)
 
 # ==========================================
-# 5. CUERPO PRINCIPAL (CÁMARA QR + ENTRADA MANUAL)
+# 5. CÁMARA QR + ENTRADA MANUAL
 # ==========================================
 st.markdown('# Programa Concurso "Manos Seguras" — Lundin Gold')
 st.markdown('#### Estación Digital de Validación Visual de Herramientas de Potencia antes del Trabajo en Campo')
@@ -182,7 +181,7 @@ with col_manual:
         codigo_input = codigo_manual
 
 # ==========================================
-# 6. GENERACIÓN DINÁMICA DEL FORMULARIO DE CHECKS
+# 6. GENERACIÓN DINÁMICA DE CHECKS
 # ==========================================
 if codigo_input:
     if codigo_input in INVENTARIO_HERRAMIENTAS:
@@ -228,8 +227,8 @@ if codigo_input:
                         detalle_final = f"FALLA CRÍTICA EN: {', '.join(fallas)}. Obs: {comentarios}"
                         status_html = """<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4><p>Equipo fuera de estándar. Reportado a SSO.</p></div>"""
                     
-                    # 🚨 PEGA AQUÍ LA URL COMPLETA DE TU GOOGLE WEB APP QUE COPIASTE EN EL PASO 1 (MANTÉN LAS COMILLAS)
-                    URL_WEB_APP = "https://script.google.com/macros/s/AKfycbwTKVXcstAii6a7s0S1SNc0q3aluiorGoGbdUBcaLsRGZgILw4Y6sz6cP9BUFfPqv4U2g/exec"
+                    # 🚨 REEMPLAZA ESTA URL CON TU NUEVA URL DE LA APLICACIÓN WEB DE GOOGLE DEL PASO 1
+                    URL_WEB_APP = "https://script.google.com/macros/s/AQUÍ_PEGA_TU_NUEVO_ID_DE_EXEC_DE_APPS_SCRIPT/exec"
                     
                     datos_envio = {
                         "fecha": str(fecha_hora),
@@ -243,21 +242,22 @@ if codigo_input:
                     }
                     
                     try:
-                        respuesta = requests.post(URL_WEB_APP, data=datos_envio)
+                        # Cambiado a json=datos_envio para asegurar transmisión robusta
+                        respuesta = requests.post(URL_WEB_APP, json=datos_envio)
                         if respuesta.status_code == 200:
                             st.markdown(status_html, unsafe_allow_html=True)
-                            st.success("💾 ¡Sincronizado directamente con la base de datos de Google Sheets!")
+                            st.success("💾 ¡Sincronizado correctamente con la base de datos de Google Sheets!")
                             st.cache_data.clear()
                             st.rerun()
                         else:
-                            st.error(f"❌ Error de transmisión. Código de respuesta del servidor: {respuesta.status_code}")
+                            st.error(f"❌ Error de transmisión. Código de respuesta: {respuesta.status_code}")
                     except Exception as e:
                         st.error(f"⚠️ Error de conexión: {e}")
     else:
         st.error(f"❌ Código '{codigo_input}' no encontrado en el Inventario.")
 
 # ==========================================
-# 7. LOG BOOK DIGITAL — BITÁCORA EN TIEMPO REAL
+# 7. LOG BOOK DIGITAL
 # ==========================================
 st.write("---")
 st.markdown("### 📖 Log Book Digital: Control de Guardia y Turnos")
