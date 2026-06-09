@@ -181,6 +181,8 @@ with st.sidebar:
             np3 = st.text_input("Punto 3:", placeholder="Ej. Ajuste de disco", key="inv_p3")
             np4 = st.text_input("Punto 4:", placeholder="Ej. Interruptor operativo", key="inv_p4")
             np5 = st.text_input("Punto 5:", placeholder="Ej. Uso de Careta", key="inv_p5")
+            np6 = st.text_input("Punto 6:", placeholder="Ej. Uso de Careta", key="inv_p6")
+            np7 = st.text_input("Punto 7:", placeholder="Ej. Uso de Careta", key="inv_p7")
             
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
@@ -202,7 +204,7 @@ with st.sidebar:
                         "tag": str(nuevo_tag), "nombre": str(nuevo_nombre), "marca": str(nueva_marca),
                         "serial": str(nuevo_serial), "imagen": str(nueva_img), "categoria": str(nueva_cat),
                         "p1": str(np1), "p2": str(np2), "p3": str(np3), "p4": str(np4), "p5": str(np5),
-                        "p6": "", "p7": ""
+                        "p6": str(np6), "p7": str(np7)
                     }
                     try:
                         respuesta = requests.post(URL_WEB_APP_MAESTRA, data=datos_inventario, params=datos_inventario, timeout=10)
