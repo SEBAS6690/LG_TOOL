@@ -179,7 +179,7 @@ if codigo_input:
             
             st.markdown("### 💾 PASO 3: Conclusión del Registro")
             
-          if st.button("🚀 Enviar Diagnóstico de Seguridad", key="btn_enviar_diagnose"):
+          if st.button("🚀 Enviar Diagnóstico de Seguridad", key="btn_enviar_diagnose")
                 if operador == "-- Seleccione un Técnico --":
                     st.error("❌ Error: Debe seleccionar su nombre de la lista en la barra lateral para firmar el registro.")
                 else:
