@@ -467,119 +467,47 @@ else:
             st.info("📡 Sincronizando datos maestros... Realice una inspección para inicializar los gráficos.")
 
 # =========================================================================
-    # 🖨️ AL FINAL ABSOLUTO: MÓDULO DE IMPRESIÓN MASIVA ANTIBLOQUEO (IFRAME)
+    # 🖨️ AL FINAL ABSOLUTO: MÓDULO DE IMPRESIÓN REPLICANDO LA FÓRMULA DE GOOGLE
     # =========================================================================
     st.write("---")
-    with st.expander("🖨️ Estación de Etiquetado Masivo: Ver e Imprimir Códigos QR de Inventario"):
-        st.markdown("##### Panel de Pañol: Selección Múltiple de Etiquetas para Impresión Térmica")
+    with st.expander("🖨️ Estación de Etiquetado: Ver e Imprimir Códigos QR de Inventario"):
+        st.markdown("##### Buscador de Activos para Impresión Térmica de Placas")
         
         if HERRAMIENTAS_DB:
             lista_tags_disponibles = sorted(list(HERRAMIENTAS_DB.keys()))
+            tag_seleccionado = st.selectbox("Seleccione el TAG del Equipo a Consultar:", lista_tags_disponibles, key="sb_modulo_impresion_final_q")
             
-            # 1. Selector rápido para marcar todo el pañol de golpe
-            col_sel1, col_sel2 = st.columns([1, 3])
-            with col_sel1:
-                seleccionar_todos = st.checkbox("✅ Seleccionar Todo el Inventario", key="chk_select_all_final")
+            info_equipo = HERRAMIENTAS_DB[tag_seleccionado]
             
-            # 2. Multiselect interactivo reactivo
-            default_selection = lista_tags_disponibles if seleccionar_todos else []
-            tags_seleccionados = st.multiselect(
-                "Seleccione los TAGs que desea mandar a la ticketera:",
-                options=lista_tags_disponibles,
-                default=default_selection,
-                key="ms_impresion_masiva_final"
-            )
+            # 🎯 CLONACIÓN DE LA FÓRMULA DE GOOGLE: Replicamos el '& A2' usando el tag seleccionado
+            url_codigo_qr = f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={tag_seleccionado}"
             
-            if tags_seleccionados:
-                st.success(f"📋 Elementos listos en cola de impresión: **{len(tags_seleccionados)} herramientas**.")
+            col_info_print, col_preview_qr = st.columns([2, 1])
+            with col_info_print:
+                st.markdown(f"**🛠️ Herramienta:** {info_equipo['nombre']}")
+                st.markdown(f"**🏷️ Marca:** {info_equipo['marca']}")
+                st.markdown(f"**🔢 Número de Serial:** `{info_equipo['serial']}`")
+                st.markdown(f"**🛡️ Categoría de Riesgo:** `{info_equipo['categoria']}`")
                 
-                # Armamos el lote de impresión
-                cola_impresion = []
-                for tag in tags_seleccionados:
-                    cola_impresion.append({
-                        "tag": tag,
-                        "nombre": HERRAMIENTAS_DB[tag]['nombre'],
-                        "url_qr": f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={tag}"
-                    })
-                
-                col_info_print, col_preview_qr = st.columns([2, 1])
-                
-                with col_info_print:
-                    st.markdown(f"**🔢 Cantidad de etiquetas a emitir:** `{len(tags_seleccionados)} unidades`")
-                    st.write("")
-                    
-                    # Botón industrial antibloqueo
-                    if st.button("🖨️ Enviar Lote a Impresora Térmica", key="btn_trigger_print_final_q", use_container_width=True):
-                        
-                        # Construimos los tickets individuales en HTML
-                        html_tickets = ""
-                        for item in cola_impresion:
-                            html_tickets += f"""
-                            <div class="ticket">
-                                <img src="{item['url_qr']}" class="qr-img">
-                                <p>TAG: {item['tag']}<br>{item['nombre']}</p>
-                            </div>
-                            """
-                        
-                        # 🧠 ESTRATEGIA MAESTRA (IFRAME): Creamos un marco oculto e inyectamos el contenido dentro de la misma app.
-                        # Al no usar window.open(), Chrome/Edge NUNCA bloquearán la acción.
-                        js_iframe_print = f"""
-                        <script>
-                            // 1. Crear o reutilizar un iframe invisible en el documento
-                            var iframe = document.getElementById('print-iframe');
-                            if (!iframe) {{
-                                iframe = document.createElement('iframe');
-                                iframe.id = 'print-iframe';
-                                iframe.style.position = 'fixed';
-                                iframe.style.right = '0';
-                                iframe.style.bottom = '0';
-                                iframe.style.width = '0';
-                                iframe.style.height = '0';
-                                iframe.style.border = '0';
-                                document.body.appendChild(iframe);
-                            }}
-                            
-                            // 2. Escribir el diseño estructurado dentro del iframe
-                            var doc = iframe.contentWindow.document;
-                            doc.open();
-                            doc.write('<html><head><title>Impresión Lundin</title>');
-                            doc.write('<style>');
-                            doc.write('body {{ text-align: center; margin: 0; padding: 0; }}');
-                            doc.write('.ticket {{ padding: 20px; page-break-after: always; text-align: center; display: block; }}');
-                            doc.write('img {{ width: 160px; height: 160px; display: inline-block; }}');
-                            doc.write('p {{ font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; margin-top: 8px; line-height: 1.4; color: #000; }}');
-                            doc.write('</style></head><body>');
-                            doc.write('{html_tickets}');
-                            doc.write('</body></html>');
-                            doc.close();
-
-                            // 3. Esperar precarga de gráficos con promesas y mandar a imprimir de forma nativa
-                            iframe.contentWindow.onload = function() {{
-                                var imagenes = doc.querySelectorAll('.qr-img');
-                                var promesas = Array.from(imagenes).map(function(img) {{
-                                    if (img.complete) return Promise.resolve();
-                                    return new Promise(function(resolve) {{ img.onload = resolve; img.onerror = resolve; }});
-                                }});
-
-                                Promise.all(promesas).then(function() {{
-                                    setTimeout(function() {{
-                                        iframe.contentWindow.focus();
-                                        iframe.contentWindow.print();
-                                    }}, 300);
-                                }});
-                            }};
-                        </script>
-                        """
-                        # Ejecutamos el componente HTML nativo de Streamlit
-                        st.components.v1.html(js_iframe_print, height=0, width=0)
-                
-                with col_preview_qr:
-                    st.markdown("**👀 Vista Previa (Lote):**")
-                    for item in cola_impresion[:3]:
-                        st.image(item["url_qr"], caption=f"QR: {item['tag']}", width=100)
-                    if len(cola_impresion) > 3:
-                        st.caption(f"y {len(cola_impresion) - 3} más en cola...")
-            else:
-                st.info("💡 Active la casilla 'Seleccionar Todo el Inventario' o use el buscador multiselect para armar su lote de etiquetas.")
+                st.write("")
+                # Botón industrial para ejecutar la cola de impresión local
+                if st.button("🖨️ Enviar a Impresora Térmica", key="btn_trigger_print_final_q", use_container_width=True):
+                    js_printer_command = f"""
+                    <script>
+                        var ventanaImpresion = window.open('', '_blank', 'width=350,height=350');
+                        ventanaImpresion.document.write('<html><head><title>Imprimir QR Lundin</title>');
+                        ventanaImpresion.document.write('<style>body {{ text-align: center; margin: 0; padding: 15px; }} img {{ width: 180px; height: 180px; }} p {{ font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; margin-top: 8px; letter-spacing: 0.5px; }}</style>');
+                        ventanaImpresion.document.write('</head><body>');
+                        ventanaImpresion.document.write('<img src="{url_codigo_qr}" onload="window.print(); window.close();">');
+                        ventanaImpresion.document.write('<p>TAG: {tag_seleccionado}<br>{info_equipo["nombre"]}</p>');
+                        ventanaImpresion.document.write('</body></html>');
+                        ventanaImpresion.document.close();
+                    </script>
+                    """
+                    st.components.v1.html(js_printer_command, height=0, width=0)
+            
+            with col_preview_qr:
+                # Proyectamos en la pantalla de Streamlit la misma imagen que genera tu Sheets
+                st.image(url_codigo_qr, caption=f"QR Sincronizado (Columna Q): {tag_seleccionado}", width=140)
         else:
             st.info("📌 Base de datos de inventario en proceso de sincronización.")
