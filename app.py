@@ -314,16 +314,65 @@ else:
         else:
             st.error("❌ El código escaneado o ingresado no corresponde a ningún activo registrado en el pañol.")
 
-    # 7. HISTORIAL VISUAL EN TIEMPO REAL DESDE GOOGLE SHEETS
-    st.write("---")
-    st.markdown("### 📋 Registro Histórico de Inspecciones (Tiempo Real)")
+# ==========================================
+# 7. HISTORIAL VISUAL EN TIEMPO REAL CON BUSCADOR
+# ==========================================
+st.write("---")
+st.markdown("### 📋 Registro Histórico de Inspecciones (Tiempo Real)")
 
-    try:
-        df_historico = pd.read_csv(URL_RESPUESTAS)
-        if not df_historico.empty:
-            df_historico = df_historico.iloc[::-1]
-            st.dataframe(df_historico, use_container_width=True, hide_index=True)
+try:
+    # 📥 Descarga las respuestas actuales directamente de la nube
+    df_historico = pd.read_csv(URL_RESPUESTAS)
+    
+    if not df_historico.empty:
+        # 🔍 INTERFAZ DE BÚSQUEDA DINÁMICA
+        # Creamos dos columnas para buscar por TAG o por Operador en paralelo
+        col_bus1, col_bus2 = st.columns(2)
+        
+        with col_bus1:
+            busqueda_tag = st.text_input(
+                "🔍 Buscar por TAG / Código QR:", 
+                placeholder="Ej. HERR-AMO-046", 
+                key="search_tag"
+            ).strip().upper()
+            
+        with col_bus2:
+            busqueda_operador = st.text_input(
+                "👤 Filtrar por Nombre del Técnico:", 
+                placeholder="Ej. Víctor", 
+                key="search_operador"
+            ).strip()
+
+        # 🧠 FILTRADO INTELIGENTE (No importa si escriben en mayúsculas o minúsculas)
+        # Primero invertimos el orden para que lo más nuevo salga arriba
+        df_filtrado = df_historico.iloc[::-1]
+        
+        if busqueda_tag:
+            # Filtra si la columna 'TAG' (o la 4ta columna) contiene el texto buscado
+            # Nota: Ajustamos el filtro usando .iloc o el nombre de columna detectado
+            col_tag_name = [c for c in df_filtrado.columns if 'TAG' in str(c).upper() or 'CÓDIGO' in str(c).upper()]
+            if col_tag_name:
+                df_filtrado = df_filtrado[df_filtrado[col_tag_name[0]].astype(str).str.upper().str.contains(busqueda_tag)]
+                
+        if busqueda_operador:
+            # Filtra si la columna 'OPERADOR' contiene el nombre ingresado
+            col_ope_name = [c for c in df_filtrado.columns if 'OPERADOR' in str(c).upper() or 'TÉCNICO' in str(c).upper()]
+            if col_ope_name:
+                df_filtrado = df_filtrado[df_filtrado[col_ope_name[0]].astype(str).str.upper().str.contains(busqueda_operador.upper())]
+
+        # 📊 DESPLIEGUE DE LA TABLA FILTRADA
+        if not df_filtrado.empty:
+            st.dataframe(
+                df_filtrado, 
+                use_container_width=True, 
+                hide_index=True
+            )
+            st.caption(f"💡 Mostrando {len(df_filtrado)} registros encontrados.")
         else:
-            st.info("📌 Aún no hay registros guardados en la base de datos central.")
-    except Exception as e:
-        st.warning("🔄 Cargando actualización del historial...")
+            st.warning("⚠️ No se encontraron inspecciones que coincidan con los criterios de búsqueda.")
+            
+    else:
+        st.info("📌 Aún no hay registros guardados en la base de datos central.")
+        
+except Exception as e:
+    st.warning("🔄 Cargando actualización del historial... Realice una nueva inspección o refresque la página.")
