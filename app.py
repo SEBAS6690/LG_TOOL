@@ -110,7 +110,7 @@ with st.sidebar:
 with st.sidebar:
     st.write("---")
     with st.expander("🛠️ Panel de Control y Gestión de Inventario"):
-        st.markdown("##### 📦 Consulta de Equipos en Pañol")
+        st.markdown("##### 📦 Consulta de Equipos en Inventario")
         
         buscar_admin = st.text_input(
             "🔍 Buscar por Serial o TAG:", 
