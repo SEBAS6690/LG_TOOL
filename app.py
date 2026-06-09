@@ -118,34 +118,73 @@ with st.sidebar:
     with col_m2:
         st.markdown(f'<div class="metric-card"><h4 style="color:red;">{rechazados}</h4><small>Inseguras</small></div>', unsafe_allow_html=True)
 
-# ==========================================
+## ==========================================
 # ⚙️ MÓDULO: ADMINISTRACIÓN DE INVENTARIO
 # ==========================================
 with st.sidebar:
     st.write("---")
-    with st.expander("🛠️ Panel de Administración (Añadir Equipos)"):
-        st.markdown("##### Registrar Nueva Herramienta o Ítems")
+    with st.expander("🛠️ Panel de Administración (Gestión de Inventario)"):
+        
+        # 📋 SUB-MÓDULO 1: VISUALIZACIÓN RÁPIDA DEL INVENTARIO ACTUAL
+        st.markdown("##### 📦 Equipos en Base de Datos")
+        
+        # Intentar cargar los datos actuales si tienes una función de lectura (ej. leer_datos)
+        # Esto ayuda al pañolero a saber qué tags ya están ocupados.
+        try:
+            if "df_inventario" in st.session_state and not st.session_state.df_inventario.empty:
+                # Mostrar solo TAG y Nombre para no saturar la barra lateral
+                st.dataframe(
+                    st.session_state.df_inventario[["TAG", "Nombre"]], 
+                    hide_index=True, 
+                    use_container_width=True
+                )
+            else:
+                st.info("💡 Usa el buscador principal para cargar o actualizar la base.")
+        except Exception:
+            pass
+            
+        st.write("---")
+        
+        # ➕ SUB-MÓDULO 2: REGISTRO DE NUEVAS HERRAMIENTAS
+        st.markdown("##### ➕ Registrar Nueva Herramienta o Ítems")
         
         # Campos del formulario interno
-        nuevo_tag = st.text_input("Etiqueta (TAG):", placeholder="Ej. HERR-AMO-046").strip().upper()
-        nuevo_nombre = st.text_input("Nombre del Equipo:", placeholder="Ej. Amoladora Angular 7\"")
-        nueva_marca = st.text_input("Marca:", placeholder="Ej. Bosch")
-        nuevo_serial = st.text_input("Número de Serial:", placeholder="Ej. SN-987654")
-        nueva_img = st.text_input("Enlace de Imagen (URL):", placeholder="https://...")
+        nuevo_tag = st.text_input("Etiqueta (TAG):", placeholder="Ej. HERR-AMO-046", key="inv_tag").strip().upper()
+        nuevo_nombre = st.text_input("Nombre del Equipo:", placeholder="Ej. Amoladora Angular 7\"", key="inv_nombre")
+        nueva_marca = st.text_input("Marca:", placeholder="Ej. Bosch", key="inv_marca")
+        nuevo_serial = st.text_input("Número de Serial:", placeholder="Ej. SN-987654", key="inv_serial")
+        nueva_img = st.text_input("Enlace de Imagen (URL):", placeholder="https://...", key="inv_img")
+        
+        # Añadimos la categoría de forma explícita para que no dependa de un 'locals()' flotante
+        nueva_cat = st.selectbox("Categoría SSO:", ["CONSTRUCCION", "MECANICA", "ELECTRICA", "MINERIA"], key="inv_cat")
         
         st.markdown("**Puntos Críticos de Control:**")
-        np1 = st.text_input("Punto 1:", placeholder="Ej. Estado del cable de alimentación")
-        np2 = st.text_input("Punto 2:", placeholder="Ej. Guarda de protección colocada")
-        np3 = st.text_input("Punto 3:", placeholder="Ej. Ajuste de disco con llave")
-        np4 = st.text_input("Punto 4:", placeholder="Ej. Interruptor de hombre muerto operativo")
-        np5 = st.text_input("Punto 5:", placeholder="Ej. Uso de EPP específico (Caretas)")
+        np1 = st.text_input("Punto 1:", placeholder="Ej. Estado del cable de alimentación", key="inv_p1")
+        np2 = st.text_input("Punto 2:", placeholder="Ej. Guarda de protección colocada", key="inv_p2")
+        np3 = st.text_input("Punto 3:", placeholder="Ej. Ajuste de disco con llave", key="inv_p3")
+        np4 = st.text_input("Punto 4:", placeholder="Ej. Interruptor de hombre muerto operativo", key="inv_p4")
+        np5 = st.text_input("Punto 5:", placeholder="Ej. Uso de EPP específico (Caretas)", key="inv_p5")
+        
+        # Opciones de control del formulario en paralelo (Guardar / Limpiar)
+        col_btn1, col_btn2 = st.columns(2)
+        
+        with col_btn1:
+            btn_guardar = st.button("➕ Guardar", key="btn_guardar_nuevo_item", use_container_width=True)
+        with col_btn2:
+            btn_limpiar = st.button("🔄 Limpiar", key="btn_limpiar_formulario", use_container_width=True)
+            
+        if btn_limpiar:
+            # Al recargar la app con st.rerun(), los placeholders vuelven a su estado original vacíos
+            st.rerun()
 
-        if st.button("➕ Guardar en Inventario Maestro", key="btn_guardar_nuevo_item"):
+        if btn_guardar:
             if not nuevo_tag or not nuevo_nombre:
                 st.error("❌ El TAG y el Nombre son campos obligatorios.")
+            # Validación simple para evitar ingresar duplicados en caliente
+            elif "df_inventario" in st.session_state and nuevo_tag in st.session_state.df_inventario["TAG"].values:
+                st.error(f"❌ El TAG {nuevo_tag} ya existe en el inventario maestro.")
             else:
                 # 🛠️ Diccionario limpio en texto plano puro (SIN USAR JSON)
-                # La clave "tipo_registro": "inventario" es la señal para el Apps Script
                 datos_inventario = {
                     "tipo_registro": "inventario",  
                     "tag": str(nuevo_tag),
@@ -153,30 +192,33 @@ with st.sidebar:
                     "marca": str(nueva_marca),
                     "serial": str(nuevo_serial),
                     "imagen": str(nueva_img),
-                    "categoria": str(nueva_cat) if 'nueva_cat' in locals() else "CONSTRUCCION",
+                    "categoria": str(nueva_cat),
                     "p1": str(np1), 
                     "p2": str(np2), 
                     "p3": str(np3), 
                     "p4": str(np4), 
                     "p5": str(np5), 
-                    "p6": str(np6) if 'np6' in locals() else "", 
-                    "p7": str(np7) if 'np7' in locals() else ""
+                    "p6": "", # Dejamos listos P6 y P7 en blanco por estructura de base de datos
+                    "p7": ""
                 }
                 
                 try:
-                    # 🚨 MANDAMOS LOS DATOS A LA APLICACIÓN WEB MAESTRA (La que termina en /exec)
-                    # Eliminamos para siempre la URL vieja de Google Forms
+                    # 🚨 MANDAMOS LOS DATOS A LA APLICACIÓN WEB MAESTRA (/exec)
                     respuesta = requests.post(URL_WEB_APP_MAESTRA, data=datos_inventario, params=datos_inventario, timeout=10)
                     
                     if respuesta.status_code == 200:
-                        st.success(f"✅ ¡{nuevo_tag} registrado en la pestaña INVENTARIO exitosamente!")
+                        st.success(f"✅ ¡{nuevo_tag} registrado con éxito!")
                         st.cache_data.clear()
+                        
+                        # Si manejas el inventario en session_state, puedes forzar una limpieza para actualizar la mini-tabla
+                        if "df_inventario" in st.session_state:
+                            del st.session_state.df_inventario
+                            
                         st.rerun()
                     else:
-                        st.error(f"❌ Error de comunicación con el servidor: {respuesta.status_code}")
+                        st.error(f"❌ Error en servidor: {respuesta.status_code}")
                 except Exception as e:
-                    st.error(f"⚠️ Error al conectar con el servidor de Sheets: {e}")
-
+                    st.error(f"⚠️ Error al conectar con Sheets: {e}")
 
 # 5. PANEL PRINCIPAL (Encabezado)
 st.markdown("""
