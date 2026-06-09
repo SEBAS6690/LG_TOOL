@@ -346,33 +346,52 @@ else:
         else:
             st.error("❌ El código escaneado o ingresado no corresponde a ningún activo registrado en el pañol.")
 
-    # 7. HISTORIAL VISUAL EN TIEMPO REAL CON BUSCADOR
+    # ==========================================
+    # 7. HISTORIAL VISUAL EN TIEMPO REAL (BOTÓN COLLAPSIBLE)
+    # ==========================================
     st.write("---")
-    st.markdown("### 📋 Registro Histórico de Inspecciones (Tiempo Real)")
+    
+    # Control de estado interno para abrir/cerrar el historial
+    if 'ver_historial' not in st.session_state:
+        st.session_state.ver_historial = False
 
-    try:
-        col_bus1, col_bus2 = st.columns(2)
-        with col_bus1:
-            busqueda_tag = st.text_input("🔍 Buscar por TAG / Código QR:", placeholder="Ej. HERR-AMO-046", key="search_tag").strip().upper()
-        with col_bus2:
-            busqueda_operador = st.text_input("👤 Filtrar por Nombre del Técnico:", placeholder="Ej. Víctor", key="search_operador").strip()
+    # Botón limpio llamado "Historial"
+    if st.button("📋 Historial", key="btn_historial_principal", use_container_width=False):
+        st.session_state.ver_historial = not st.session_state.ver_historial
+        st.rerun()
 
-        df_filtrado = df_historico_real.iloc[::-1]
+    # 🔓 Si el botón está activo, se despliega el historial y sus buscadores
+    if st.session_state.ver_historial:
+        st.markdown("### 📋 Registro Histórico de Inspecciones (Tiempo Real)")
         
-        if busqueda_tag:
-            col_tag_name = [c for c in df_filtrado.columns if 'TAG' in str(c).upper() or 'CÓDIGO' in str(c).upper()]
-            if col_tag_name:
-                df_filtrado = df_filtrado[df_filtrado[col_tag_name[0]].astype(str).str.upper().str.contains(busqueda_tag)]
-                
-        if busqueda_operador:
-            col_ope_name = [c for c in df_filtrado.columns if 'OPERADOR' in str(c).upper() or 'TÉCNICO' in str(c).upper()]
-            if col_ope_name:
-                df_filtrado = df_filtrado[df_filtrado[col_ope_name[0]].astype(str).str.upper().str.contains(busqueda_operador.upper())]
+        try:
+            # Buscadores en paralelo para filtrar en caliente
+            col_bus1, col_bus2 = st.columns(2)
+            with col_bus1:
+                busqueda_tag = st.text_input("🔍 Buscar por TAG / Código QR:", placeholder="Ej. HERR-AMO-046", key="search_tag").strip().upper()
+            with col_bus2:
+                busqueda_operador = st.text_input("👤 Filtrar por Nombre del Técnico:", placeholder="Ej. Víctor", key="search_operador").strip()
 
-        if not df_filtrado.empty:
-            st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
-            st.caption(f"💡 Mostrando {len(df_filtrado)} registros encontrados.")
-        else:
-            st.warning("⚠️ No se encontraron inspecciones.")
-    except Exception:
-        pass
+            # Invertir filas para mostrar lo más reciente arriba
+            df_filtrado = df_historico_real.iloc[::-1]
+            
+            # Filtro por TAG
+            if busqueda_tag:
+                col_tag_name = [c for c in df_filtrado.columns if 'TAG' in str(c).upper() or 'CÓDIGO' in str(c).upper()]
+                if col_tag_name:
+                    df_filtrado = df_filtrado[df_filtrado[col_tag_name[0]].astype(str).str.upper().str.contains(busqueda_tag)]
+                    
+            # Filtro por Operador
+            if busqueda_operador:
+                col_ope_name = [c for c in df_filtrado.columns if 'OPERADOR' in str(c).upper() or 'TÉCNICO' in str(c).upper()]
+                if col_ope_name:
+                    df_filtrado = df_filtrado[df_filtrado[col_ope_name[0]].astype(str).str.upper().str.contains(busqueda_operador.upper())]
+
+            # Despliegue de datos filtrados
+            if not df_filtrado.empty:
+                st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
+                st.caption(f"💡 Mostrando {len(df_filtrado)} registros encontrados.")
+            else:
+                st.warning("⚠️ No se encontraron inspecciones con esos criterios de búsqueda.")
+        except Exception:
+            st.warning("🔄 Cargando actualización del historial...")
