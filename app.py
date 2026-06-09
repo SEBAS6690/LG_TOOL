@@ -38,24 +38,36 @@ URL_INVENTARIO = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq
 def cargar_inventario_dinamico():
     try:
         df_inv = pd.read_csv(URL_INVENTARIO)
+        
+        # 🧠 BLINDAJE POR ÍNDICE POSICIONAL:
+        # Forzamos la detección de la columna Q (Índice 16 en Python, ya que inicia en 0)
+        col_qr_name = None
+        if len(df_inv.columns) >= 17:
+            col_qr_name = df_inv.columns[16] # Columna Q exacta
+        else:
+            # Si por alguna razón el CSV vino recortado, buscamos por nombre aproximado
+            for c in df_inv.columns:
+                if 'QR' in str(c).upper() or str(c).strip().upper() == 'Q':
+                    col_qr_name = c
+                    break
+
         db_dinamica = {}
         for _, fila in df_inv.iterrows():
-            tag_activo = str(fila['TAG']).strip().upper()
+            # Limpieza y estandarización del TAG
+            tag_activo = str(fila['TAG']).strip().upper() if 'TAG' in fila else str(fila.iloc[0]).strip().upper()
+            
+            # Extraer el enlace QR de la columna Q de forma segura
+            enlace_qr = ""
+            if col_qr_name and col_qr_name in fila and pd.notna(fila[col_qr_name]):
+                enlace_qr = str(fila[col_qr_name]).strip()
+            
             db_dinamica[tag_activo] = {
-                "nombre": fila['Nombre'],
-                "categoria": fila['Categoria'],
-                "marca": fila['Marca'],
-                "serial": fila['Serial'],
-                "imagen": fila['Imagen'],
-                "puntos": [
-                    f"⚠️ **Punto 1:** {fila['Punto1']}",
-                    f"⚠️ **Punto 2:** {fila['Punto2']}",
-                    f"⚠️ **Punto 3:** {fila['Punto3']}",
-                    f"⚠️ **Punto 4:** {fila['Punto4']}",
-                    f"⚠️ **Punto 5:** {fila['Punto5']}",
-                    f"⚠️ **Punto 6:** {fila['Punto6']}",
-                    f"⚠️ **Punto 7:** {fila['Punto7']}"
-                ]
+                "nombre": fila.get('Nombre', fila.get('HERRAMIENTA', 'No asignado')),
+                "categoria": fila.get('Categoria', fila.get('CATEGORIA', 'No asignado')),
+                "marca": fila.get('Marca', fila.get('MARCA', 'No asignado')),
+                "serial": fila.get('Serial', fila.get('SERIAL', 'No asignado')),
+                "imagen": fila.get('Imagen', fila.get('IMAGEN', '')), 
+                "QR": enlace_qr  # 🎯 Aquí se inyecta el enlace de la columna Q
             }
         return db_dinamica
     except Exception as e:
