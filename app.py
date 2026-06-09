@@ -1,10 +1,23 @@
 import streamlit as st
+import subprocess
+import sys
+import os
+
+# 🚀 INYECTOR AUTOMÁTICO DE DEPENDENCIAS PARA CÁMARA Y QR EN LA NUBE
+try:
+    import cv2
+    from pyzbar.pyzbar import decode
+    from PIL import Image
+except ModuleNotFoundError:
+    # 1. Instalar primero los paquetes de Python necesarios
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "opencv-python-headless", "pyzbar", "pillow", "pandas", "requests"])
+    
+    # 2. Truco dinámico: Forzar la recarga de la app para asegurar las importaciones
+    st.rerun()
+
 import pandas as pd
 import datetime
 import requests
-import cv2
-import numpy as np
-
 # ==========================================
 # 1. CONFIGURACIÓN DE LA PÁGINA Y ESTILOS
 # ==========================================
