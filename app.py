@@ -216,7 +216,7 @@ with col_c1:
 with col_c2:
     area_trabajo = st.selectbox(
         "🏢 Área de Destino de la Herramienta:", 
-        ["Mantenimiento Mina", "Planta de Beneficio", "Talleres Mecánicos", "Subestación Eléctrica"],
+        ["Electrico", "Mecanico", "Contratista", "Pasta"],
         key="main_area_selector"
     )
 
