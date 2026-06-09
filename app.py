@@ -114,69 +114,66 @@ with st.sidebar:
     with col_m2:
         st.markdown(f'<div class="metric-card"><h4 style="color:red;">{rechazados}</h4><small>Inseguras</small></div>', unsafe_allow_html=True)
 
+# # ==========================================
+# ⚙️ MÓDULO: GESTIÓN DE INVENTARIO ÉLITE
 # ==========================================
-# ⚙️ MÓDULO: ADMINISTRACIÓN DE INVENTARIO (PROTEGIDO)
-
-
-# ==========================================
-
- # 📋 SUB-MÓDULO 1: VISUALIZACIÓN Y BÚSQUEDA DEL INVENTARIO ACTUAL
-            st.markdown("##### 📦 Equipos en Base de Datos")
-            
-            buscar_admin = st.text_input(
-                "🔍 Buscar por Serial o TAG en Pañol:", 
-                placeholder="Ej. SN-987654 o HERR-...", 
-                key="search_admin_inv"
-            ).strip().upper()
-            
-            try:
-                if HERRAMIENTAS_DB:
-                    df_mini_inv = pd.DataFrame.from_dict(HERRAMIENTAS_DB, orient='index').reset_index()
-                    df_mini_inv.rename(columns={'index': 'TAG', 'nombre': 'Nombre', 'serial': 'Serial'}, inplace=True)
-                    
-                    if buscar_admin:
-                        df_mini_inv = df_mini_inv[
-                            df_mini_inv['Serial'].astype(str).str.upper().str.contains(buscar_admin) | 
-                            df_mini_inv['TAG'].astype(str).str.upper().str.contains(buscar_admin)
-                        ]
-                    
-                    st.dataframe(
-                        df_mini_inv[["TAG", "Nombre", "Serial"]], 
-                        hide_index=True, 
-                        use_container_width=True
-                    )
-                    if buscar_admin:
-                        st.caption(f"💡 Coincidencias encontradas: {len(df_mini_inv)}")
-                else:
-                    st.info("📌 No se registran equipos en el pañol local.")
-            except Exception:
-                st.error("🔄 Error al cargar la vista previa del inventario.")
-                
-            st.write("---")
 with st.sidebar:
     st.write("---")
-    with st.expander("🛠️ Panel de Administración (Gestión de Inventario)"):
+    with st.expander("🛠️ Panel de Control y Gestión de Inventario"):
         
-        # 🔒 FILTRO DE CONTRASEÑA DE SEGURIDAD
-        # Puedes cambiar "Lundin2026" por la clave de SSO que prefieras
-        CLAVE_ACCESO_CORRECTA = "Lundin2026"  
+        # 🔓 SECCIÓN ABIERTA: VISUALIZACIÓN Y BÚSQUEDA LIBRE
+        st.markdown("##### 📦 Consulta de Equipos en Pañol")
+        
+        # Buscador dinámico por Serial o TAG (Visible para todos)
+        buscar_admin = st.text_input(
+            "🔍 Buscar por Serial o TAG:", 
+            placeholder="Ej. SN-987654 o HERR-...", 
+            key="search_admin_inv"
+        ).strip().upper()
+        
+        try:
+            if HERRAMIENTAS_DB:
+                df_mini_inv = pd.DataFrame.from_dict(HERRAMIENTAS_DB, orient='index').reset_index()
+                df_mini_inv.rename(columns={'index': 'TAG', 'nombre': 'Nombre', 'serial': 'Serial'}, inplace=True)
+                
+                # Filtrado instantáneo en caliente
+                if buscar_admin:
+                    df_mini_inv = df_mini_inv[
+                        df_mini_inv['Serial'].astype(str).str.upper().str.contains(buscar_admin) | 
+                        df_mini_inv['TAG'].astype(str).str.upper().str.contains(buscar_admin)
+                    ]
+                
+                # Despliegue de la tabla libre
+                st.dataframe(
+                    df_mini_inv[["TAG", "Nombre", "Serial"]], 
+                    hide_index=True, 
+                    use_container_width=True
+                )
+                if buscar_admin:
+                    st.caption(f"💡 Coincidencias encontradas: {len(df_mini_inv)}")
+            else:
+                st.info("📌 No se registran equipos en el pañol local.")
+        except Exception:
+            st.error("🔄 Error al cargar la vista previa del inventario.")
+            
+        st.write("---")
+        
+        # 🔒 SECCIÓN RESTRINGIDA: REGISTRO DE NUEVOS EQUIPOS (CON CLAVE)
+        st.markdown("##### ➕ Alta de Nuevas Herramientas")
+        
+        CLAVE_ACCESO_CORRECTA = "Lundin2026"  # Tu PIN maestro
         
         clave_ingresada = st.text_input(
-            "🔑 Ingrese Contraseña Administrador:", 
+            "🔑 Contraseña para Añadir Equipos:", 
             type="password", 
-            placeholder="Clave de seguridad SSO",
+            placeholder="Clave de Supervisor SSO",
             key="admin_password_lock"
         )
         
         if clave_ingresada == CLAVE_ACCESO_CORRECTA:
-            st.success("🔓 Acceso Concedido")
-            st.write("---")
+            st.success("🔓 Modo Editor Habilitado")
             
-           
-            
-            # ➕ SUB-MÓDULO 2: REGISTRO DE NUEVAS HERRAMIENTAS
-            st.markdown("##### ➕ Registrar Nueva Herramienta o Ítems")
-            
+            # Campos del formulario de registro (Solo aparecen con clave correcta)
             nuevo_tag = st.text_input("Etiqueta (TAG):", placeholder="Ej. HERR-AMO-046", key="inv_tag").strip().upper()
             nuevo_nombre = st.text_input("Nombre del Equipo:", placeholder="Ej. Amoladora Angular 7\"", key="inv_nombre")
             nueva_marca = st.text_input("Marca:", placeholder="Ej. Bosch", key="inv_marca")
@@ -193,7 +190,7 @@ with st.sidebar:
             
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
-                btn_guardar = st.button("➕ Guardar", key="btn_guardar_nuevo_item", use_container_width=True)
+                btn_guardar = st.button("➕ Guardar Equipo", key="btn_guardar_nuevo_item", use_container_width=True)
             with col_btn2:
                 btn_limpiar = st.button("🔄 Limpiar", key="btn_limpiar_formulario", use_container_width=True)
                 
@@ -204,7 +201,7 @@ with st.sidebar:
                 if not nuevo_tag or not nuevo_nombre:
                     st.error("❌ El TAG y el Nombre son campos obligatorios.")
                 elif nuevo_tag in HERRAMIENTAS_DB:
-                    st.error(f"❌ El TAG {nuevo_tag} ya existe en el inventario.")
+                    st.error(f"❌ El TAG {nuevo_tag} ya existe en la base de datos.")
                 else:
                     datos_inventario = {
                         "tipo_registro": "inventario",  
@@ -216,7 +213,7 @@ with st.sidebar:
                     try:
                         respuesta = requests.post(URL_WEB_APP_MAESTRA, data=datos_inventario, params=datos_inventario, timeout=10)
                         if respuesta.status_code == 200:
-                            st.success(f"✅ ¡{nuevo_tag} registrado en la pestaña INVENTARIO con éxito!")
+                            st.success(f"✅ ¡{nuevo_tag} guardado con éxito en Sheets!")
                             st.cache_data.clear()
                             st.rerun()
                         else:
@@ -225,9 +222,9 @@ with st.sidebar:
                         st.error(f"⚠️ Error al conectar: {e}")
                         
         elif clave_ingresada != "":
-            st.error("❌ Contraseña Incorrecta. Acceso Denegado.")
+            st.error("❌ Contraseña Incorrecta. Función de escritura bloqueada.")
         else:
-            st.info("🔒 Ingrese la contraseña de Supervisor para desplegar las opciones de administración.")
+            st.info("💡 Ingrese la contraseña de Supervisor si necesita añadir una herramienta nueva al maestro.")
 
 # ==========================================
 # 5. PANEL PRINCIPAL (Encabezado)
