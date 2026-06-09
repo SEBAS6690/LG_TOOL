@@ -2,24 +2,8 @@ import streamlit as st
 import pandas as pd
 import datetime
 import requests
-from PIL import Image
-from pyzbar.pyzbar import decode
 import numpy as np
 
-def leer_qr(imagen):
-    try:
-        imagen_np = np.array(imagen)
-
-        codigos = decode(imagen_np)
-
-        for codigo in codigos:
-            return codigo.data.decode("utf-8")
-
-        return None
-
-    except Exception as e:
-        st.error(f"Error leyendo QR: {e}")
-        return None
 # ==========================================
 # 1. CONFIGURACIÓN DE LA PÁGINA Y ESTILOS
 # ==========================================
@@ -160,52 +144,52 @@ with st.sidebar:
         st.markdown(f'<div class="metric-card"><h4 style="color:red;">{rechazados}</h4><small>Inseguras</small></div>', unsafe_allow_html=True)
 
 # ==========================================
-# 5. CUERPO PRINCIPAL (INTERFAZ DE CONTROL)
+# 5. CUERPO PRINCIPAL (CÁMARA QR + ENTRADA MANUAL)
 # ==========================================
 st.markdown('# Programa Concurso "Manos Seguras" — Lundin Gold')
 st.markdown('#### Estación Digital de Validación Visual de Herramientas de Potencia antes del Trabajo en Campo')
 st.write("---")
 
-st.markdown("### 🔍 PASO 1: Ingreso de la Herramienta")
+st.markdown("### 📷 PASO 1: Validación de Herramienta por Código QR")
 
-col1, col2 = st.columns([2,1])
+col_cam, col_manual = st.columns([1.2, 1])
+codigo_input = ""
 
-with col1:
-    codigo_manual = st.text_input(
-        "Digite el TAG de la herramienta:",
-        placeholder="Ej: ELE-TL-001"
-    )
+with col_cam:
+    st.markdown("**Active su cámara, enfoque el código QR del equipo y presione 'Take Photo':**")
+    foto_camara = st.camera_input("Escáner Óptico de Campo", key="totem_opt_scanner")
+    
+    if foto_camara is not None:
+        try:
+            import cv2
+            bytes_data = foto_camara.getvalue()
+            img_np = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
+            
+            # Detector de códigos QR optimizado para OpenCV Headless
+            detector_qr = cv2.QRCodeDetector()
+            tag_detectado, _, _ = detector_qr.detectAndDecode(img_np)
+            
+            if tag_detectado:
+                codigo_input = str(tag_detectado).strip().upper()
+                st.success(f"🎯 ¡Código QR Identificado! TAG: **{codigo_input}**")
+            else:
+                st.warning("⚠️ No se distinguió un código QR nítido. Asegure una buena iluminación o use el ingreso manual.")
+        except Exception as e:
+            st.error(f"⚠️ Nota de procesamiento de video: {e}. Intente registrar el TAG manualmente abajo.")
 
-with col2:
-    st.write("📷 Escanear QR")
-    foto = st.camera_input("Tomar foto del QR")
+with col_manual:
+    st.markdown("**Respaldo de Ingreso Manual:**")
+    codigo_manual = st.text_input("Si la etiqueta QR está desgastada, digite el TAG aquí directamente:", placeholder="Ej: ELE-TL-001").strip().upper()
+    if codigo_manual:
+        codigo_input = codigo_manual
 
-codigo_qr = ""
-
-if foto:
-    try:
-        imagen = Image.open(foto)
-
-        resultado = leer_qr(imagen)
-
-        if resultado:
-            codigo_qr = resultado
-            st.success(f"✅ QR detectado: {codigo_qr}")
-        else:
-            st.warning("⚠️ No se encontró un QR válido")
-
-    except Exception as e:
-        st.error(f"Error leyendo QR: {e}")
-
-codigo_input = (codigo_qr or codigo_manual).strip().upper()
-
-
-
+# ==========================================
+# 6. GENERACIÓN DINÁMICA DEL FORMULARIO DE CHECKS
+# ==========================================
 if codigo_input:
     if codigo_input in INVENTARIO_HERRAMIENTAS:
         tool_info = INVENTARIO_HERRAMIENTAS[codigo_input]
         
-        st.success(f"✨ ¡Herramienta {codigo_input} identificada con éxito!")
         st.write("---")
         st.markdown("### 📋 PASO 2: Matriz de Control Visual Obligatoria")
         
@@ -247,36 +231,36 @@ if codigo_input:
                         status_html = """<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4><p>Equipo fuera de estándar. Reportado a SSO.</p></div>"""
                     
                     # 🚨 REEMPLAZA ESTA URL CON EL LINK DE TU GOOGLE FORM MORADO TERMINADO EN /formResponse
-                    URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSecO_N06RlShHidRPO3JYuveetxHHqqdOpPHisMeMuTdT5Omw/formResponse"
+                    URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSdX_XXXXXXXXXXXX_Pon_Tu_Codigo_Aqui_XXXXXXXXXXXX/formResponse"
                     
-                    # 🚨 VERIFICADO CON TU CAPTURA DE PANTALLA DE LA CONSOLA F12
+                    # 🚨 PAYLOAD VERIFICADO CON TU CONSOLA F12 CODFICADO ESTRICTAMENTE EN STRING PLANO
                     datos_envio = {
-                        "entry.2064132338": fecha_hora,             # Columna FECHA
-                        "entry.1706240243": operador,               # Columna OPERADOR
-                        "entry.1741634260": codigo_input,           # Columna TAG
-                        "entry.444265005": tool_info['nombre'],     # Columna HERRAMIENTA
-                        "entry.1843195861": tool_info['marca'],     # Columna MARCA
-                        "entry.254146747": tool_info['serial'],     # Columna SERIAL
-                        "entry.2120021665": estado_final,           # Columna ESTADO
-                        "entry.2001552097": detalle_final           # Columna DETALLE
+                        "entry.2064132338": str(fecha_hora),
+                        "entry.1706240243": str(operador),
+                        "entry.1741634260": str(codigo_input),
+                        "entry.444265005": str(tool_info['nombre']),
+                        "entry.1843195861": str(tool_info['marca']),
+                        "entry.254146747": str(tool_info['serial']),
+                        "entry.2120021665": str(estado_final),
+                        "entry.2001552097": str(detalle_final)
                     }
                     
                     try:
                         respuesta = requests.post(URL_FORM, data=datos_envio)
-                        if respuesta.status_code in [200, 302]:
+                        if respuesta.status_code == 200 or respuesta.status_code == 302:
                             st.markdown(status_html, unsafe_allow_html=True)
                             st.success("💾 ¡Sincronizado con la base de datos de Google Sheets!")
                             st.cache_data.clear()
                             st.rerun()
                         else:
-                            st.error(f"❌ Error al enviar. Google Forms respondió con código: {respuesta.status_code}")
+                            st.error(f"❌ Error de transmisión. Google Forms respondió con código: {respuesta.status_code}")
                     except Exception as e:
                         st.error(f"⚠️ Error de conexión: {e}")
     else:
         st.error(f"❌ Código '{codigo_input}' no encontrado en el Inventario.")
 
 # ==========================================
-# 6. LOG BOOK DIGITAL — BITÁCORA EN TIEMPO REAL
+# 7. LOG BOOK DIGITAL — BITÁCORA EN TIEMPO REAL
 # ==========================================
 st.write("---")
 st.markdown("### 📖 Log Book Digital: Control de Guardia y Turnos")
