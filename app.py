@@ -235,8 +235,6 @@ st.markdown('# Programa Concurso "Manos Seguras" — Lundin Gold')
 st.markdown('#### Estación Digital de Validación Visual de Herramientas de Potencia antes del Trabajo en Campo')
 st.write("---")
 
-st.markdown("### 🔍 PASO 1: Escaneo de Código QR o ID")
-codigo_input = st.text_input("Enfoque el código QR de la placa de la herramienta o digite el TAG manualmente:", placeholder="Ej: ELE-TL-002").strip().upper()
 
 if codigo_input:
     if codigo_input in INVENTARIO_HERRAMIENTAS:
