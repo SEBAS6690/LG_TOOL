@@ -467,47 +467,106 @@ else:
             st.info("📡 Sincronizando datos maestros... Realice una inspección para inicializar los gráficos.")
 
 # =========================================================================
-    # 🖨️ AL FINAL ABSOLUTO: MÓDULO DE IMPRESIÓN REPLICANDO LA FÓRMULA DE GOOGLE
+    # 🖨️ AL FINAL ABSOLUTO: MÓDULO DE SELECCIÓN E IMPRESIÓN MASIVA DE QR
     # =========================================================================
     st.write("---")
-    with st.expander("🖨️ Estación de Etiquetado: Ver e Imprimir Códigos QR de Inventario"):
+    with st.expander("🖨️ Estación de Etiquetado Masivo: Ver e Imprimir Códigos QR de Inventario"):
         st.markdown("##### Buscador de Activos para Impresión Térmica de Placas")
         
         if HERRAMIENTAS_DB:
             lista_tags_disponibles = sorted(list(HERRAMIENTAS_DB.keys()))
-            tag_seleccionado = st.selectbox("Seleccione el TAG del Equipo a Consultar:", lista_tags_disponibles, key="sb_modulo_impresion_final_q")
             
-            info_equipo = HERRAMIENTAS_DB[tag_seleccionado]
+            # 1. Selector rápido para marcar todo el pañol de golpe
+            col_sel1, col_sel2 = st.columns([1, 3])
+            with col_sel1:
+                seleccionar_todos = st.checkbox("✅ Seleccionar Todo el Inventario", key="chk_select_all_final")
             
-            # 🎯 CLONACIÓN DE LA FÓRMULA DE GOOGLE: Replicamos el '& A2' usando el tag seleccionado
-            url_codigo_qr = f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={tag_seleccionado}"
+            # 2. Reemplazamos el selectbox por un multiselect interactivo
+            default_selection = lista_tags_disponibles if seleccionar_todos else []
+            tags_seleccionados = st.multiselect(
+                "Seleccione los TAGs que desea mandar a la ticketera:",
+                options=lista_tags_disponibles,
+                default=default_selection,
+                key="ms_impresion_masiva_final"
+            )
             
-            col_info_print, col_preview_qr = st.columns([2, 1])
-            with col_info_print:
-                st.markdown(f"**🛠️ Herramienta:** {info_equipo['nombre']}")
-                st.markdown(f"**🏷️ Marca:** {info_equipo['marca']}")
-                st.markdown(f"**🔢 Número de Serial:** `{info_equipo['serial']}`")
-                st.markdown(f"**🛡️ Categoría de Riesgo:** `{info_equipo['categoria']}`")
+            if tags_seleccionados:
+                st.success(f"📋 Elementos listos en cola de impresión: **{len(tags_seleccionados)} herramientas**.")
                 
-                st.write("")
-                # Botón industrial para ejecutar la cola de impresión local
-                if st.button("🖨️ Enviar a Impresora Térmica", key="btn_trigger_print_final_q", use_container_width=True):
-                    js_printer_command = f"""
-                    <script>
-                        var ventanaImpresion = window.open('', '_blank', 'width=350,height=350');
-                        ventanaImpresion.document.write('<html><head><title>Imprimir QR Lundin</title>');
-                        ventanaImpresion.document.write('<style>body {{ text-align: center; margin: 0; padding: 15px; }} img {{ width: 180px; height: 180px; }} p {{ font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; margin-top: 8px; letter-spacing: 0.5px; }}</style>');
-                        ventanaImpresion.document.write('</head><body>');
-                        ventanaImpresion.document.write('<img src="{url_codigo_qr}" onload="window.print(); window.close();">');
-                        ventanaImpresion.document.write('<p>TAG: {tag_seleccionado}<br>{info_equipo["nombre"]}</p>');
-                        ventanaImpresion.document.write('</body></html>');
-                        ventanaImpresion.document.close();
-                    </script>
-                    """
-                    st.components.v1.html(js_printer_command, height=0, width=0)
-            
-            with col_preview_qr:
-                # Proyectamos en la pantalla de Streamlit la misma imagen que genera tu Sheets
-                st.image(url_codigo_qr, caption=f"QR Sincronizado (Columna Q): {tag_seleccionado}", width=140)
+                # Armamos el lote replicando la fórmula dinámica de tu API de Google por cada TAG marcado
+                cola_impresion = []
+                for tag in tags_seleccionados:
+                    cola_impresion.append({
+                        "tag": tag,
+                        "nombre": HERRAMIENTAS_DB[tag]['nombre'],
+                        "url_qr": f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={tag}"
+                    })
+                
+                # Dividimos la pantalla: Datos y botón a la izquierda, vistas previas a la derecha
+                col_info_print, col_preview_qr = st.columns([2, 1])
+                
+                with col_info_print:
+                    st.markdown(f"**🔢 Cantidad de etiquetas a emitir:** `{len(tags_seleccionados)} unidades`")
+                    st.write("")
+                    
+                    # Botón industrial para ejecutar la cola de impresión masiva local
+                    if st.button("🖨️ Enviar Lote a Impresora Térmica", key="btn_trigger_print_final_q", use_container_width=True):
+                        
+                        # Generamos los bloques HTML individuales con salto de página CSS automático para la ticketera
+                        html_tickets = ""
+                        for item in cola_impresion:
+                            html_tickets += f"""
+                            <div class="ticket">
+                                <img src="{item['url_qr']}" class="qr-img">
+                                <p>TAG: {item['tag']}<br>{item['nombre']}</p>
+                            </div>
+                            """
+                        
+                        # JavaScript robusto: Espera a que la cola de red descargue los gráficos antes de disparar el spooler
+                        js_printer_command = f"""
+                        <script>
+                            var ventanaImpresion = window.open('', '_blank', 'width=450,height=550');
+                            ventanaImpresion.document.write('<html><head><title>Imprimir QR Lundin</title>');
+                            ventanaImpresion.document.write('<style>');
+                            ventanaImpresion.document.write('body {{ text-align: center; margin: 0; padding: 0; }}');
+                            ventanaImpresion.document.write('.ticket {{ padding: 20px; page-break-after: always; text-align: center; display: block; }}');
+                            ventanaImpresion.document.write('img {{ width: 180px; height: 180px; display: inline-block; }}');
+                            ventanaImpresion.document.write('p {{ font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; margin-top: 8px; letter-spacing: 0.5px; color: #000; }}');
+                            ventanaImpresion.document.write('<style>body {{ text-align: center; margin: 0; padding: 15px; }} img {{ width: 180px; height: 180px; }} p {{ font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; margin-top: 8px; letter-spacing: 0.5px; }}</style>');
+                            ventanaImpresion.document.write('</style></head><body>');
+                            ventanaImpresion.document.write('{html_tickets}');
+                            ventanaImpresion.document.write('</body></html>');
+                            ventanaImpresion.document.close();
+
+                            // Monitoreo en cascada del búfer de imágenes
+                            ventanaImpresion.onload = function() {{
+                                var imagenes = ventanaImpresion.document.querySelectorAll('.qr-img');
+                                var promesas = Array.from(imagenes).map(function(img) {{
+                                    if (img.complete) return Promise.resolve();
+                                    return new Promise(function(resolve) {{ img.onload = resolve; img.onerror = resolve; }});
+                                }});
+
+                                // Ejecutar ventana de impresión sólo cuando la carga de datos esté al 100%
+                                Promise.all(promesas).then(function() {{
+                                    setTimeout(function() {{
+                                        ventanaImpresion.focus();
+                                        ventanaImpresion.print();
+                                        ventanaImpresion.close();
+                                    }}, 300);
+                                }});
+                            }};
+                        </script>
+                        """
+                        st.components.v1.html(js_printer_command, height=0, width=0)
+                
+                with col_preview_qr:
+                    # Muestra las miniaturas en cuadrícula de los primeros elementos seleccionados
+                    st.markdown("**👀 Vista Previa (Lote):**")
+                    for item in cola_impresion[:3]:  # Mostramos un adelanto de los 3 primeros
+                        st.image(item["url_qr"], caption=f"QR: {item['tag']}", width=100)
+                    if len(cola_impresion) > 3:
+                        st.caption(f"and {len(cola_impresion) - 3} más en cola...")
+            else:
+                st.info("💡 Active la casilla 'Seleccionar Todo el Inventario' o use el buscador multiselect para armar su lote de etiquetas.")
         else:
             st.info("📌 Base de datos de inventario en proceso de sincronización.")
