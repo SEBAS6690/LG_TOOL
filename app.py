@@ -1,26 +1,10 @@
-import os
-import subprocess
-import sys
-
-# 🚀 SISTEMA AUTO-INSTALADOR DE DEPENDENCIAS EN LA NUBE
-try:
-    from streamlit_camera_input_live import camera_input_live
-    import cv2
-except ModuleNotFoundError:
-    # Si falta alguna librería, Python la descarga directamente en el servidor
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "streamlit-camera-input-live", "opencv-python-headless", "numpy"])
-    # Forzar la recarga de los módulos instalados
-    import os
-    st = sys.modules.get('streamlit')
-    if st:
-        st.rerun()
 import streamlit as st
 import pandas as pd
 import datetime
 import requests
 import cv2
 import numpy as np
-from streamlit_camera_input_live import camera_input_live
+
 
 # ==========================================
 # 1. CONFIGURACIÓN DE LA PÁGINA Y ESTILOS
@@ -216,33 +200,35 @@ col_cam, col_manual = st.columns([1.2, 1])
 codigo_input = ""
 
 with col_cam:
-    st.markdown("**Acerque el código QR impreso de la herramienta a la cámara:**")
-    # Lector de cámara en vivo asíncrono
-    imagen_capturada = camera_input_live(debounce=500, key="lector_camara_iiot")
+    st.markdown("**Active su cámara y capture el código QR de la herramienta:**")
+    # 🎥 CÁMARA NATIVA DE STREAMLIT (Ultraestable, compatible con todo)
+    foto_camara = st.camera_input("Enfoque el QR y presione 'Take Photo'", key="lector_camara_nativo")
     
-    if imagen_capturada is not None:
+    if foto_camara is not None:
         try:
-            # Convertir los bytes de la captura en formato legible por OpenCV
-            bytes_data = imagen_capturada.read()
+            # Convertir la foto tomada por el operario en matriz para OpenCV
+            bytes_data = foto_camara.getvalue()
             img_np = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
             
-            # Inicializar el detector de códigos QR nativo de OpenCV
+            # Decodificador de QR por Visión Artificial
             detector_qr = cv2.QRCodeDetector()
             tag_detectado, _, _ = detector_qr.detectAndDecode(img_np)
             
             if tag_detectado:
                 codigo_input = str(tag_detectado).strip().upper()
-                st.info(f"🎯 Código detectado por cámara: **{codigo_input}**")
+                st.success(f"🎯 ¡Código detectado con éxito: **{codigo_input}**!")
+            else:
+                st.warning("⚠️ No se detectó un código QR válido en la foto. Intente enfocar mejor o use el respaldo manual.")
         except Exception as e:
-            pass
+            st.error(f"Error al procesar la imagen: {e}")
 
 with col_manual:
     st.markdown("**Respaldo de Teclado (Si la cámara está sucia o dañada):**")
     codigo_manual = st.text_input("Digite el TAG manualmente si es necesario:", placeholder="Ej: ELE-TL-002").strip().upper()
     
-    # Si se escribe manualmente, tiene prioridad sobre la cámara
     if codigo_manual:
-        codigo_input = codigo_manual
+        codigo_input = codigo_manual   
+   
 
 # Procesamiento de la Herramienta Escaneada
 if codigo_input:
