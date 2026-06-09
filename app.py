@@ -111,7 +111,7 @@ with st.sidebar:
     st.write("---")
     with st.expander("🛠️ Panel de Control y Gestión de Inventario"):
         # 🔓 SECCIÓN ABIERTA: VISUALIZACIÓN Y BÚSQUEDA LIBRE CON ÚLTIMA FECHA
-        st.markdown("##### 📦 Consulta de Equipos en Pañol")
+        st.markdown("##### 📦 Consulta de Equipos en el inventario")
         
         # Buscador dinámico por Serial o TAG (Visible para todos)
         buscar_admin = st.text_input(
