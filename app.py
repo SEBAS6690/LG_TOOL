@@ -23,21 +23,18 @@ st.markdown("""
     .danger-box { padding: 20px; background-color: #FADBD8; border-left: 6px solid #CD6155; border-radius: 5px; margin-bottom: 15px; color: #78281F; }
     .success-box { padding: 20px; background-color: #D4EFDF; border-left: 6px solid #27AE60; border-radius: 5px; margin-bottom: 15px; color: #145A32; }
     .metric-card { background-color: white; padding: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #E5E7E9; text-align: center; }
+    .warning-lock { padding: 30px; background-color: #FFF2CC; border-left: 8px solid #FFC72C; border-radius: 8px; color: #7F6000; text-align: center; margin-top: 50px; }
     </style>
 """, unsafe_allow_html=True)
 
-# 2. HISTORIAL LOCAL TEMPORAL (Métricas rápidas del dispositivo)
-if 'registro_inspecciones' not in st.session_state:
-    st.session_state.registro_inspecciones = []
+# 2. URL MAESTRA DE TU WEB APP SCRIPT
+URL_WEB_APP_MAESTRA = "https://script.google.com/macros/s/AQUÍ_PEGA_TU_ID_DE_EXEC_DE_APPS_SCRIPT/exec"
 
 # 3. CONEXIÓN DINÁMICA AL INVENTARIO DE GOOGLE SHEETS
-# 3. CONEXIÓN DINÁMICA AL INVENTARIO DE GOOGLE SHEETS
-# 🚨 2. URL MAESTRA DE TU WEB APP SCRIPT (La única que necesitas para todo)
-URL_WEB_APP_MAESTRA = "https://script.google.com/macros/s/AKfycbx3ApkYqq0X_6JKi5Vz8ZcdnjTpddQKj-XAiis-Klu2EKFY7ONIQurwMe-qWWSURSMG9w/exec"
 ID_DOCUMENTO = "1et_T6dZZWpCc2Q4BMrASdo76mGtIvBLeaBdBR358RS0"
 URL_INVENTARIO = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Inventario"
 
-@st.cache_data(ttl="5s")  # Cache ultra corto para que detecte rápido los cambios que hagas en el Excel
+@st.cache_data(ttl="3s")
 def cargar_inventario_dinamico():
     try:
         df_inv = pd.read_csv(URL_INVENTARIO)
@@ -54,7 +51,7 @@ def cargar_inventario_dinamico():
                     f"⚠️ **Punto 1:** {fila['Punto1']}",
                     f"⚠️ **Punto 2:** {fila['Punto2']}",
                     f"⚠️ **Punto 3:** {fila['Punto3']}",
-                     f"⚠️ **Punto 4:** {fila['Punto4']}",
+                    f"⚠️ **Punto 4:** {fila['Punto4']}",
                     f"⚠️ **Punto 5:** {fila['Punto5']}",
                     f"⚠️ **Punto 6:** {fila['Punto6']}",
                     f"⚠️ **Punto 7:** {fila['Punto7']}"
@@ -65,14 +62,13 @@ def cargar_inventario_dinamico():
         st.error(f"⚠️ Error al leer la pestaña 'Inventario': {e}")
         return {}
 
-# Poblar el diccionario maestro desde la nube
 HERRAMIENTAS_DB = cargar_inventario_dinamico()
 
 # 4. CONEXIÓN A LAS BASES DE DATOS DE PERSONAL Y RESPUESTAS
 URL_PERSONAL = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Personal"
 URL_RESPUESTAS = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%201"
 
-@st.cache_data(ttl="5s")
+@st.cache_data(ttl="3s")
 def cargar_personal_dinamico():
     try:
         df_per = pd.read_csv(URL_PERSONAL)
@@ -81,18 +77,17 @@ def cargar_personal_dinamico():
     except Exception:
         return ["Sebastián Yánez", "Víctor Morillo"]
 
-# Cargar el listado de operadores
 LISTA_OPERADORES = cargar_personal_dinamico()
 
-# Intentar descargar el histórico real para calcular las métricas en vivo
 try:
     df_historico_real = pd.read_csv(URL_RESPUESTAS)
-    # Estandarizar nombres de columnas a mayúsculas para evitar choques
     df_historico_real.columns = df_historico_real.columns.str.upper().str.strip()
 except Exception:
     df_historico_real = pd.DataFrame()
 
-# BARRA LATERAL (SIDEBAR OPTIMIZADA CON MÉTRICAS EN TIEMPO REAL)
+# ==========================================
+# BARRA LATERAL (SIDEBAR)
+# ==========================================
 with st.sidebar:
     st.image("https://www.lundingold.com/assets/img/logo.png", width=180)
     st.markdown("### ⚙️ Configuración del Tótem")
@@ -107,7 +102,6 @@ with st.sidebar:
     st.write("---")
     st.markdown("### 📊 Métricas de Turno Real")
     
-    # 🔄 CONEXIÓN DE MÉTRICAS CORREGIDA (Lectura estricta en Mayúsculas)
     if not df_historico_real.empty and "ESTADO" in df_historico_real.columns:
         aprobados = len(df_historico_real[df_historico_real["ESTADO"] == "APROBADO"])
         rechazados = len(df_historico_real[df_historico_real["ESTADO"] == "RECHAZADO"])
@@ -120,255 +114,216 @@ with st.sidebar:
     with col_m2:
         st.markdown(f'<div class="metric-card"><h4 style="color:red;">{rechazados}</h4><small>Inseguras</small></div>', unsafe_allow_html=True)
 
-## ==========================================
+# ==========================================
 # ⚙️ MÓDULO: ADMINISTRACIÓN DE INVENTARIO
 # ==========================================
 with st.sidebar:
     st.write("---")
     with st.expander("🛠️ Panel de Administración (Gestión de Inventario)"):
-        
-        # 📋 SUB-MÓDULO 1: VISUALIZACIÓN RÁPIDA DEL INVENTARIO ACTUAL
         st.markdown("##### 📦 Equipos en Base de Datos")
-        
-        # Intentar cargar los datos actuales si tienes una función de lectura (ej. leer_datos)
-        # Esto ayuda al pañolero a saber qué tags ya están ocupados.
         try:
-            if "df_inventario" in st.session_state and not st.session_state.df_inventario.empty:
-                # Mostrar solo TAG y Nombre para no saturar la barra lateral
-                st.dataframe(
-                    st.session_state.df_inventario[["TAG", "Nombre"]], 
-                    hide_index=True, 
-                    use_container_width=True
-                )
-            else:
-                st.info("💡 Usa el buscador principal para cargar o actualizar la base.")
+            if HERRAMIENTAS_DB:
+                df_mini_inv = pd.DataFrame.from_dict(HERRAMIENTAS_DB, orient='index').reset_index()
+                df_mini_inv.rename(columns={'index': 'TAG', 'nombre': 'Nombre'}, inplace=True)
+                st.dataframe(df_mini_inv[["TAG", "Nombre"]], hide_index=True, use_container_width=True)
         except Exception:
             pass
             
         st.write("---")
-        
-        # ➕ SUB-MÓDULO 2: REGISTRO DE NUEVAS HERRAMIENTAS
         st.markdown("##### ➕ Registrar Nueva Herramienta o Ítems")
         
-        # Campos del formulario interno
         nuevo_tag = st.text_input("Etiqueta (TAG):", placeholder="Ej. HERR-AMO-046", key="inv_tag").strip().upper()
         nuevo_nombre = st.text_input("Nombre del Equipo:", placeholder="Ej. Amoladora Angular 7\"", key="inv_nombre")
         nueva_marca = st.text_input("Marca:", placeholder="Ej. Bosch", key="inv_marca")
         nuevo_serial = st.text_input("Número de Serial:", placeholder="Ej. SN-987654", key="inv_serial")
         nueva_img = st.text_input("Enlace de Imagen (URL):", placeholder="https://...", key="inv_img")
-        
-        # Añadimos la categoría de forma explícita para que no dependa de un 'locals()' flotante
         nueva_cat = st.selectbox("Categoría SSO:", ["CONSTRUCCION", "MECANICA", "ELECTRICA", "MINERIA"], key="inv_cat")
         
         st.markdown("**Puntos Críticos de Control:**")
-        np1 = st.text_input("Punto 1:", placeholder="Ej. Estado del cable de alimentación", key="inv_p1")
-        np2 = st.text_input("Punto 2:", placeholder="Ej. Guarda de protección colocada", key="inv_p2")
-        np3 = st.text_input("Punto 3:", placeholder="Ej. Ajuste de disco con llave", key="inv_p3")
-        np4 = st.text_input("Punto 4:", placeholder="Ej. Interruptor de hombre muerto operativo", key="inv_p4")
-        np5 = st.text_input("Punto 5:", placeholder="Ej. Uso de EPP específico (Caretas)", key="inv_p5")
-        np6 = st.text_input("Punto 6:", placeholder="Ej. Interruptor de hombre muerto operativo", key="inv_p6")
-        np7 = st.text_input("Punto 7:", placeholder="Ej. Uso de EPP específico (Caretas)", key="inv_p7")
+        np1 = st.text_input("Punto 1:", placeholder="Ej. Estado del cable", key="inv_p1")
+        np2 = st.text_input("Punto 2:", placeholder="Ej. Guarda colocada", key="inv_p2")
+        np3 = st.text_input("Punto 3:", placeholder="Ej. Ajuste de disco", key="inv_p3")
+        np4 = st.text_input("Punto 4:", placeholder="Ej. Interruptor operativo", key="inv_p4")
+        np5 = st.text_input("Punto 5:", placeholder="Ej. Uso de Careta", key="inv_p5")
         
-        # Opciones de control del formulario en paralelo (Guardar / Limpiar)
         col_btn1, col_btn2 = st.columns(2)
-        
         with col_btn1:
             btn_guardar = st.button("➕ Guardar", key="btn_guardar_nuevo_item", use_container_width=True)
         with col_btn2:
             btn_limpiar = st.button("🔄 Limpiar", key="btn_limpiar_formulario", use_container_width=True)
             
         if btn_limpiar:
-            # Al recargar la app con st.rerun(), los placeholders vuelven a su estado original vacíos
             st.rerun()
 
         if btn_guardar:
             if not nuevo_tag or not nuevo_nombre:
                 st.error("❌ El TAG y el Nombre son campos obligatorios.")
-            # Validación simple para evitar ingresar duplicados en caliente
-            elif "df_inventario" in st.session_state and nuevo_tag in st.session_state.df_inventario["TAG"].values:
-                st.error(f"❌ El TAG {nuevo_tag} ya existe en el inventario maestro.")
+            elif nuevo_tag in HERRAMIENTAS_DB:
+                st.error(f"❌ El TAG {nuevo_tag} ya existe en el inventario.")
             else:
-                # 🛠️ Diccionario limpio en texto plano puro (SIN USAR JSON)
                 datos_inventario = {
                     "tipo_registro": "inventario",  
-                    "tag": str(nuevo_tag),
-                    "nombre": str(nuevo_nombre),
-                    "marca": str(nueva_marca),
-                    "serial": str(nuevo_serial),
-                    "imagen": str(nueva_img),
-                    "categoria": str(nueva_cat),
-                    "p1": str(np1), 
-                    "p2": str(np2), 
-                    "p3": str(np3), 
-                    "p4": str(np4), 
-                    "p5": str(np5), 
-                    "p6": str(np6), # Dejamos listos P6 y P7 en blanco por estructura de base de datos
-                    "p7": str(np7)
+                    "tag": str(nuevo_tag), "nombre": str(nuevo_nombre), "marca": str(nueva_marca),
+                    "serial": str(nuevo_serial), "imagen": str(nueva_img), "categoria": str(nueva_cat),
+                    "p1": str(np1), "p2": str(np2), "p3": str(np3), "p4": str(np4), "p5": str(np5),
+                    "p6": "", "p7": ""
                 }
-                
                 try:
-                    # 🚨 MANDAMOS LOS DATOS A LA APLICACIÓN WEB MAESTRA (/exec)
                     respuesta = requests.post(URL_WEB_APP_MAESTRA, data=datos_inventario, params=datos_inventario, timeout=10)
-                    
                     if respuesta.status_code == 200:
-                        st.success(f"✅ ¡{nuevo_tag} registrado con éxito!")
+                        st.success(f"✅ ¡{nuevo_tag} registrado en la pestaña INVENTARIO!")
                         st.cache_data.clear()
-                        
-                        # Si manejas el inventario en session_state, puedes forzar una limpieza para actualizar la mini-tabla
-                        if "df_inventario" in st.session_state:
-                            del st.session_state.df_inventario
-                            
                         st.rerun()
                     else:
-                        st.error(f"❌ Error en servidor: {respuesta.status_code}")
+                        st.error(f"❌ Error de comunicación: {respuesta.status_code}")
                 except Exception as e:
-                    st.error(f"⚠️ Error al conectar con Sheets: {e}")
+                    st.error(f"⚠️ Error al conectar: {e}")
 
+# ==========================================
 # 5. PANEL PRINCIPAL (Encabezado)
+# ==========================================
 st.markdown("""
     <div class="title-banner">
         <h2>Programa Concurso "Manos Seguras" — Lundin Gold</h2>
-        <p>Estación Digital de Validation Visual de Herramientas de Potencia antes del Trabajo en Campo</p>
+        <p>Estación Digital de Validación Visual de Herramientas de Potencia antes del Trabajo en Campo</p>
     </div>
 """, unsafe_allow_html=True)
 
-# PASO 1: ESCANEO DE CÓDIGO QR CON LA CÁMARA
-st.markdown("### 🔍 PASO 1: Escaneo de Código QR")
-img_file_buffer = st.camera_input("Enfoque el código QR de la placa de aluminio anodizado")
+# 🔐 CANDADO DE SEGURIDAD INDUSTRIAL OBLIGATORIO
+if operador == "-- Seleccione un Técnico --":
+    st.markdown("""
+        <div class="warning-lock">
+            <h2>⚠️ CONTROL DE ACCESO RESTRINGIDO</h2>
+            <p style="font-size: 18px;">Por políticas de SSO y control de guardia de Lundin Gold, 
+            <b>debe seleccionar su Nombre y Apellido</b> en la barra lateral izquierda para desbloquear el Tótem Digital.</p>
+        </div>
+    """, unsafe_allow_html=True)
+else:
+    # 🔓 SI SELECCIONÓ UN TÉCNICO, SE DESBLOQUEA TODO EL CONTENIDO ABAJO:
 
-codigo_escaneado = ""
+    # PASO 1: ESCANEO DE CÓDIGO QR CON LA CÁMARA
+    st.markdown("### 🔍 PASO 1: Escaneo de Código QR")
+    img_file_buffer = st.camera_input("Enfoque el código QR de la placa de aluminio anodizado")
 
-if img_file_buffer is not None:
-    bytes_data = img_file_buffer.getvalue()
-    cv_image = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
-    
-    detector = cv2.QRCodeDetector()
-    data, bbox, straight_qrcode = detector.detectAndDecode(cv_image)
-    
-    if data:
-        codigo_escaneado = data.upper().strip()
-        st.success(f"✅ ¡Código QR detectado!: `{codigo_escaneado}`")
-    else:
-        st.warning("🔄 Analizando imagen... Asegúrese de enfocar el código QR centrado y con buena luz.")
+    codigo_escaneado = ""
 
-# Entrada manual alternativa
-codigo_manual = st.text_input("O ingrese el TAG manualmente si es necesario:", value=codigo_escaneado).strip().upper()
-codigo_input = codigo_manual if codigo_manual else codigo_escaneado
+    if img_file_buffer is not None:
+        bytes_data = img_file_buffer.getvalue()
+        cv_image = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
+        
+        detector = cv2.QRCodeDetector()
+        data, bbox, straight_qrcode = detector.detectAndDecode(cv_image)
+        
+        if data:
+            codigo_escaneado = data.upper().strip()
+            st.success(f"✅ ¡Código QR detectado!: `{codigo_escaneado}`")
+        else:
+            st.warning("🔄 Analizando imagen... Asegúrese de enfocar el código QR centrado y con buena luz.")
 
-# 6. PASO 2 Y PASO 3: DETALLE DE VALIDACIÓN E INFORME
-if codigo_input:
-    if codigo_input in HERRAMIENTAS_DB:
-        tool_info = HERRAMIENTAS_DB[codigo_input]
-        
-        st.write("---")
-        st.markdown(f"### 🛠️ PASO 2: Ficha Técnica del Activo e Inspección")
-        
-        # Tabla dinámica de especificaciones técnicas
-        col_datos, col_espacio = st.columns([2, 1])
-        with col_datos:
-            datos_tabla = {
-                "PARÁMETRO INDUSTRIAL": ["TAG / CÓDIGO QR", "HERRAMIENTA / EQUIPO", "MARCA / FABRICANTE", "NÚMERO DE SERIAL", "CATEGORÍA DE RIESGO SSO"],
-                "DETALLES ESPECÍFICOS": [codigo_input, tool_info['nombre'], tool_info['marca'], tool_info['serial'], tool_info['categoria']]
-            }
-            df_ficha = pd.DataFrame(datos_tabla)
-            st.table(df_ficha)
-            
-        st.info("💡 Complete la validación visual obligatoria enfocada en la protección de extremidades superiores.")
-        
-        col_img, col_chk = st.columns([1, 1.2])
-        
-        with col_img:
-            if pd.isna(tool_info["imagen"]) or str(tool_info["imagen"]).strip() == "":
-                st.warning("📷 No hay imagen configurada para esta herramienta en el Excel.")
-            else:
-                st.image(tool_info["imagen"], caption=f"Control Crítico: {tool_info['nombre']}", use_container_width=True)
-            
-        with col_chk:
-            st.markdown("#### Verifique el estado físico y marque las casillas correspondientes:")
-            chk1 = st.checkbox(tool_info["puntos"][0])
-            chk2 = st.checkbox(tool_info["puntos"][1])
-            chk3 = st.checkbox(tool_info["puntos"][2])
-            chk4 = st.checkbox(tool_info["puntos"][3])
-            chk5 = st.checkbox(tool_info["puntos"][4])
-            chk6 = st.checkbox(tool_info["puntos"][5])
-            chk7 = st.checkbox(tool_info["puntos"][6])
-            
+    codigo_manual = st.text_input("O ingrese el TAG manualmente si es necesario:", value=codigo_escaneado).strip().upper()
+    codigo_input = codigo_manual if codigo_manual else codigo_escaneado
+
+    # 6. PASO 2 Y PASO 3: DETALLE DE VALIDACIÓN E INFORME
+    if codigo_input:
+        if codigo_input in HERRAMIENTAS_DB:
+            tool_info = HERRAMIENTAS_DB[codigo_input]
             
             st.write("---")
-            comentarios = st.text_input("📝 Notas u observaciones adicionales:", placeholder="Ej. Carcasa en buen estado")
+            st.markdown(f"### 🛠️ PASO 2: Ficha Técnica del Activo e Inspección")
             
-            st.markdown("### 💾 PASO 3: Conclusión del Registro")
+            col_datos, col_espacio = st.columns([2, 1])
+            with col_datos:
+                datos_tabla = {
+                    "PARÁMETRO INDUSTRIAL": ["TAG / CÓDIGO QR", "HERRAMIENTA / EQUIPO", "MARCA / FABRICANTE", "NÚMERO DE SERIAL", "CATEGORÍA DE RIESGO SSO"],
+                    "DETALLES ESPECÍFICOS": [codigo_input, tool_info['nombre'], tool_info['marca'], tool_info['serial'], tool_info['categoria']]
+                }
+                df_ficha = pd.DataFrame(datos_tabla)
+                st.table(df_ficha)
+                
+            st.info("💡 Complete la validación visual obligatoria enfocada en la protección de extremidades superiores.")
             
-            if st.button("🚀 Enviar Diagnóstico de Seguridad", key="btn_enviar_diagnose"):
-                if not operador:
-                    st.error("❌ Error: Debe ingresar el nombre del operador en la barra lateral para firmar el registro.")
+            col_img, col_chk = st.columns([1, 1.2])
+            
+            with col_img:
+                if pd.isna(tool_info["imagen"]) or str(tool_info["imagen"]).strip() == "":
+                    st.warning("📷 No hay imagen configurada para esta herramienta en el Excel.")
                 else:
+                    st.image(tool_info["imagen"], caption=f"Control Crítico: {tool_info['nombre']}", use_container_width=True)
+                
+            with col_chk:
+                st.markdown("#### Verifique el estado físico y marque las casillas correspondientes:")
+                chk1 = st.checkbox(tool_info["puntos"][0], key="c1")
+                chk2 = st.checkbox(tool_info["puntos"][1], key="c2")
+                chk3 = st.checkbox(tool_info["puntos"][2], key="c3")
+                chk4 = st.checkbox(tool_info["puntos"][3], key="c4")
+                chk5 = st.checkbox(tool_info["puntos"][4], key="c5")
+                chk6 = st.checkbox(tool_info["puntos"][5], key="c6")
+                chk7 = st.checkbox(tool_info["puntos"][6], key="c7")
+                
+                st.write("---")
+                comentarios = st.text_input("📝 Notas u observaciones adicionales:", placeholder="Ej. Carcasa en buen estado")
+                
+                st.markdown("### 💾 PASO 3: Conclusión del Registro")
+                
+                if st.button("🚀 Enviar Diagnóstico de Seguridad", key="btn_enviar_diagnose"):
                     fecha_hora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
                     
-                    if chk1 and chk2 and chk3:
+                    if chk1 and chk2 and chk3 and chk4 and chk5 and chk6 and chk7:
                         estado_final = "APROBADO"
                         detalle_final = comentarios if comentarios else "Todo operativo"
                         status_html = f"""<div class="success-box"><h4>✅ ¡CHECK-IN EXITOSO! HERRAMIENTA AUTORIZADA PARA TRABAJO</h4><p>El equipo <b>{tool_info['nombre']}</b> cumple las condiciones. ¡Operación segura habilitada!</p></div>"""
                         st.balloons()
                     else:
                         estado_final = "RECHAZADO"
-                        detalle_final = f"FALLA CRÍTICA DE SEGURIDAD: {comentarios}"
+                        fallas = []
+                        if not chk1: fallas.append("Punto 1")
+                        if not chk2: fallas.append("Punto 2")
+                        if not chk3: fallas.append("Punto 3")
+                        if not chk4: fallas.append("Punto 4")
+                        if not chk5: fallas.append("Punto 5")
+                        if not chk6: fallas.append("Punto 6")
+                        if not chk7: fallas.append("Punto 7")
+                        detalle_final = f"FALLA CRÍTICA EN: {', '.join(fallas)}. Obs: {comentarios}"
                         status_html = f"""<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4><p><b>¡No use este equipo!</b> Registro despachado automáticamente al supervisor de SSO.</p></div>"""
 
                     st.markdown(status_html, unsafe_allow_html=True)
-
-                    # 🚀 ENVÍO DIRECTO A TU GOOGLE FORMS REAL
-                    URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSecO_N06RlShHidRPO3JYuveetxHHqqdOpPHisMeMuTdT5Omw/formResponse"
                     
                     datos_envio = {
-                        "entry.94170114": fecha_hora,
-                        "entry.1584737127": operador,
-                        "entry.612752579": codigo_input,
-                        "entry.43000870": tool_info['nombre'],
-                        "entry.741366664": tool_info['marca'],
-                        "entry.1913540372": tool_info['serial'],
-                        "entry.2081212052": estado_final,
-                        "entry.19695549": detalle_final
+                        "tipo_registro": "diagnostico",  
+                        "fecha": str(fecha_hora),
+                        "operador": str(operador),
+                        "tag": str(codigo_input),
+                        "herramienta": str(tool_info['nombre']),
+                        "marca": str(tool_info['marca']),
+                        "serial": str(tool_info['serial']),
+                        "estado": str(estado_final),
+                        "detalle": str(detalle_final)
                     }
                     
                     try:
-                        requests.post(URL_FORM, data=datos_envio)
-                        st.success("💾 ¡Sincronizado con la base de datos de Google Sheets!")
-                        
-                        # Agregar al historial de la pantalla actual
-                        st.session_state.registro_inspecciones.insert(0, {
-                            "Fecha": fecha_hora, "Operador": operador, "TAG": codigo_input,
-                            "Herramienta": tool_info['nombre'], "Marca": tool_info['marca'], 
-                            "Serial": tool_info['serial'], "Estado": estado_final, "Detalle": detalle_final
-                        })
+                        respuesta = requests.post(URL_WEB_APP_MAESTRA, data=datos_envio, params=datos_envio, timeout=10)
+                        if respuesta.status_code == 200:
+                            st.success("💾 ¡Diagnóstico sincronizado en la base de datos de Google Sheets!")
+                            st.cache_data.clear()
+                            st.rerun()
+                        else:
+                            st.error(f"❌ Error de transmisión del servidor: {respuesta.status_code}")
                     except Exception as e:
                         st.error(f"⚠️ Error al conectar con la base de datos: {e}")
-                        
-    else:
-        st.error("❌ El código escaneado o ingresado no corresponde a ningún activo registrado en el pañol.")
+                            
+        else:
+            st.error("❌ El código escaneado o ingresado no corresponde a ningún activo registrado en el pañol.")
 
-# 7. HISTORIAL VISUAL EN TIEMPO REAL DESDE GOOGLE SHEETS
-st.write("---")
-st.markdown("### 📋 Registro Histórico de Inspecciones (Tiempo Real)")
+    # 7. HISTORIAL VISUAL EN TIEMPO REAL DESDE GOOGLE SHEETS
+    st.write("---")
+    st.markdown("### 📋 Registro Histórico de Inspecciones (Tiempo Real)")
 
-# URL automática para leer la pestaña de respuestas
-URL_RESPUESTAS = f"https://docs.google.com/spreadsheets/d/{ID_DOCUMENTO}/gviz/tq?tqx=out:csv&sheet=Respuestas%20de%20formulario%201"
-
-try:
-    # Descarga las respuestas actuales directamente de la nube
-    df_historico = pd.read_csv(URL_RESPUESTAS)
-    
-    if not df_historico.empty:
-        # Ordenar para que la última inspección aparezca primerita en la lista
-        df_historico = df_historico.iloc[::-1]
-        
-        # Mostrar la tabla estilizada en la pantalla del Tótem
-        st.dataframe(
-            df_historico, 
-            use_container_width=True,
-            hide_index=True
-        )
-    else:
-        st.info("📌 Aún no hay registros guardados en la base de datos central.")
-except Exception as e:
-    st.warning("🔄 Cargando actualización del historial... Si tarda, realice una nueva inspección o recargue la página.")
+    try:
+        df_historico = pd.read_csv(URL_RESPUESTAS)
+        if not df_historico.empty:
+            df_historico = df_historico.iloc[::-1]
+            st.dataframe(df_historico, use_container_width=True, hide_index=True)
+        else:
+            st.info("📌 Aún no hay registros guardados en la base de datos central.")
+    except Exception as e:
+        st.warning("🔄 Cargando actualización del historial...")
