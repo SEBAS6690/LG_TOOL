@@ -204,29 +204,6 @@ with st.sidebar:
 
 
 
-# PASO 1: ESCANEO DE CÓDIGO QR CON LA CÁMARA
-st.markdown("### 🔍 PASO 1: Escaneo de Código QR")
-img_file_buffer = st.camera_input("Enfoque el código QR de la placa de aluminio anodizado")
-
-codigo_escaneado = ""
-
-if img_file_buffer is not None:
-    bytes_data = img_file_buffer.getvalue()
-    cv_image = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
-    
-    detector = cv2.QRCodeDetector()
-    data, bbox, straight_qrcode = detector.detectAndDecode(cv_image)
-    
-    if data:
-        codigo_escaneado = data.upper().strip()
-        st.success(f"✅ ¡Código QR detectado!: `{codigo_escaneado}`")
-    else:
-        st.warning("🔄 Analizando imagen... Asegúrese de enfocar el código QR centrado y con buena luz.")
-
-# Entrada manual alternativa
-codigo_manual = st.text_input("O ingrese el TAG manualmente si es necesario:", value=codigo_escaneado).strip().upper()
-codigo_input = codigo_manual if codigo_manual else codigo_escaneado
-
 
 # ==========================================
 # 6. CUERPO PRINCIPAL DEL TÓTEM (INTERFAZ DE ESCANEO)
