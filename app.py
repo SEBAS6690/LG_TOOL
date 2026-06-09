@@ -179,7 +179,7 @@ if codigo_input:
             
             st.markdown("### 💾 PASO 3: Conclusión del Registro")
             
-          if st.button("🚀 Enviar Diagnóstico de Seguridad", key="btn_enviar_diagnose")
+            if st.button("🚀 Enviar Diagnóstico de Seguridad", key="btn_enviar_diagnose"):
                 if operador == "-- Seleccione un Técnico --":
                     st.error("❌ Error: Debe seleccionar su nombre de la lista en la barra lateral para firmar el registro.")
                 else:
@@ -197,38 +197,34 @@ if codigo_input:
                         detalle_final = f"FALLA CRÍTICA EN: {', '.join(fallas)}. Obs: {comentarios}"
                         status_html = """<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4><p>Equipo fuera de estándar. Reportado a SSO.</p></div>"""
                     
-                    # 🚨 REEMPLAZA ESTA URL CON EL ID REAL DE TU FORMULARIO MORADO DE GOOGLE
-                    URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSfD_Xxxxxxxxxx_Coloca_Aqui_El_ID_Real_De_Tu_Formulario/formResponse"
+                    # 🚨 REEMPLAZA ESTA URL CON EL LINK DE TU GOOGLE FORM MORADO TERMINADO EN /formResponse
+                    URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSecO_N06RlShHidRPO3JYuveetxHHqqdOpPHisMeMuTdT5Omw/formResponse"
                     
-                    # 🛠️ DICCIONARIO CORREGIDO: Mapeo directo de inputs de texto plano
+                    # 🚨 VERIFICADO CON TU CAPTURA DE PANTALLA DE LA CONSOLA F12
                     datos_envio = {
-                        "entry.2064132338": fecha_hora,             # FECHA
-                        "entry.1706240243": operador,               # OPERADOR
-                        "entry.1741634260": codigo_input,           # TAG
-                        "entry.444265005": tool_info['nombre'],     # HERRAMIENTA
-                        "entry.1843195861": tool_info['marca'],     # MARCA
-                        "entry.254146747": tool_info['serial'],     # SERIAL
-                        "entry.2120021665": estado_final,           # ESTADO
-                        "entry.2001552097": detalle_final           # DETALLE
-                    }
-                    
-                    # Añadimos los headers para que simule una petición web nativa de navegador
-                    headers = {
-                        "Content-Type": "application/x-www-form-urlencoded"
+                        "entry.2064132338": fecha_hora,             # Columna FECHA
+                        "entry.1706240243": operador,               # Columna OPERADOR
+                        "entry.1741634260": codigo_input,           # Columna TAG
+                        "entry.444265005": tool_info['nombre'],     # Columna HERRAMIENTA
+                        "entry.1843195861": tool_info['marca'],     # Columna MARCA
+                        "entry.254146747": tool_info['serial'],     # Columna SERIAL
+                        "entry.2120021665": estado_final,           # Columna ESTADO
+                        "entry.2001552097": detalle_final           # Columna DETALLE
                     }
                     
                     try:
-                        respuesta = requests.post(URL_FORM, data=datos_envio, headers=headers)
-                        # Si responde 200 o redirecciona de manera estándar, fue exitoso
+                        respuesta = requests.post(URL_FORM, data=datos_envio)
                         if respuesta.status_code in [200, 302]:
                             st.markdown(status_html, unsafe_allow_html=True)
                             st.success("💾 ¡Sincronizado con la base de datos de Google Sheets!")
                             st.cache_data.clear()
                             st.rerun()
                         else:
-                            st.error(f"❌ Error al enviar. Código de respuesta de Google: {respuesta.status_code}")
+                            st.error(f"❌ Error al enviar. Google Forms respondió con código: {respuesta.status_code}")
                     except Exception as e:
                         st.error(f"⚠️ Error de conexión: {e}")
+    else:
+        st.error(f"❌ Código '{codigo_input}' no encontrado en el Inventario.")
 
 # ==========================================
 # 6. LOG BOOK DIGITAL — BITÁCORA EN TIEMPO REAL
