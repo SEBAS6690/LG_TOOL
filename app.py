@@ -145,7 +145,7 @@ with st.sidebar:
                 st.error("❌ El TAG y el Nombre son campos obligatorios.")
             else:
                 # URL de envío de respuestas de TU FORMULARIO DE INVENTARIO
-                URL_FORM_INVENTARIO = "https://docs.google.com/forms/d/e/TU_CODIGO_DE_FORM_DE_INVENTARIO/formResponse"
+                URL_FORM_INVENTARIO = "https://docs.google.com/forms/d/e/1FAIpQLSecO_N06RlShHidRPO3JYuveetxHHqqdOpPHisMeMuTdT5Omw/formResponse"
                 
                 # Mapeo de datos con tus entry reales de la pestaña Inventario
                 datos_inventario = {
