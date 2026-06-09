@@ -231,7 +231,7 @@ if codigo_input:
                         status_html = """<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4><p>Equipo fuera de estándar. Reportado a SSO.</p></div>"""
                     
                     # 🚨 REEMPLAZA ESTA URL CON EL LINK DE TU GOOGLE FORM MORADO TERMINADO EN /formResponse
-                    URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSdX_XXXXXXXXXXXX_Pon_Tu_Codigo_Aqui_XXXXXXXXXXXX/formResponse"
+                    URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSecO_N06RlShHidRPO3JYuveetxHHqqdOpPHisMeMuTdT5Omw/formResponse"
                     
                     # 🚨 PAYLOAD VERIFICADO CON TU CONSOLA F12 CODFICADO ESTRICTAMENTE EN STRING PLANO
                     datos_envio = {
