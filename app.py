@@ -348,7 +348,7 @@ else:
 
 
 # ==========================================
-    # 7. HISTORIAL Y DASHBOARD INTERACTIVO REACTIVO
+    # 7. DASHBOARD INTERACTIVO (SOLO: OPERADOR, TAG, ESTADO)
     # ==========================================
     st.write("---")
     
@@ -360,33 +360,33 @@ else:
         st.rerun()
 
     if st.session_state.ver_historial:
-        st.markdown("## 📈 Centro de Analítica Operacional")
+        st.markdown("## 📈 Centro de Analítica Operacional (Variables Críticas)")
         
         try:
-            # 📥 1. PREPARACIÓN DE DATOS Y BUSCADORES (EL FILTRO MANDA)
-            df_base = df_historico_real.copy()
-            
-            # Detectar nombres de columnas dinámicamente
-            col_estado = [c for c in df_base.columns if 'ESTADO' in str(c).upper()][0]
-            col_tag = [c for c in df_base.columns if 'TAG' in str(c).upper() or 'CÓDIGO' in str(c).upper()][0]
-            col_ope = [c for c in df_base.columns if 'OPERADOR' in str(c).upper() or 'TÉCNICO' in str(c).upper()][0]
+            # 📥 1. DETECCIÓN DINÁMICA DE COLUMNAS EN LA BASE BASE
+            col_estado = [c for c in df_historico_real.columns if 'ESTADO' in str(c).upper()][0]
+            col_tag = [c for c in df_historico_real.columns if 'TAG' in str(c).upper() or 'CÓDIGO' in str(c).upper()][0]
+            col_ope = [c for c in df_historico_real.columns if 'OPERADOR' in str(c).upper() or 'TÉCNICO' in str(c).upper()][0]
 
-            st.markdown("#### 🔍 Filtros Globales de Analítica")
+            # ✂️ AISLAMIENTO DE FILTRO: Tomamos estrictamente solo las 3 columnas requeridas
+            df_reducido = df_historico_real[[col_ope, col_tag, col_estado]].copy()
+
+            st.markdown("#### 🔍 Filtros en Caliente")
             col_f1, col_f2 = st.columns(2)
             with col_f1:
-                f_tag = st.text_input("Filtrar por TAG:", placeholder="Todos los equipos", key="f_tag").strip().upper()
+                f_tag = st.text_input("Filtrar por TAG de Equipo:", placeholder="Ej. HERR-AMO-046", key="f_tag").strip().upper()
             with col_f2:
-                f_ope = st.text_input("Filtrar por Técnico:", placeholder="Todo el personal", key="f_ope").strip().upper()
+                f_ope = st.text_input("Filtrar por Nombre de Técnico:", placeholder="Ej. VÍCTOR", key="f_ope").strip().upper()
 
-            # --- APLICACIÓN DEL FILTRO REACTIVO ---
-            df_interactivo = df_base.copy()
+            # --- APLICACIÓN DE FILTROS SOBRE EL MODELO REDUCIDO ---
+            df_interactivo = df_reducido.copy()
             if f_tag:
                 df_interactivo = df_interactivo[df_interactivo[col_tag].astype(str).str.upper().str.contains(f_tag)]
             if f_ope:
                 df_interactivo = df_interactivo[df_interactivo[col_ope].astype(str).str.upper().str.contains(f_ope)]
-            # --------------------------------------
+            # ------------------------------------------------------
 
-            # 📊 2. MÉTRICAS DINÁMICAS (Calculadas sobre el filtro)
+            # 📊 2. CÁLCULO DE MÉTRICAS REACTIVAS
             total_f = len(df_interactivo)
             if total_f > 0:
                 aprob_f = len(df_interactivo[df_interactivo[col_estado].astype(str).str.upper() == "APROBADO"])
@@ -394,37 +394,41 @@ else:
                 porcentaje_seguro = (aprob_f / total_f) * 100
 
                 m1, m2, m3, m4 = st.columns(4)
-                m1.metric("Muestras Filtradas", total_f)
-                m2.metric("Aprobadas", aprob_f, delta=f"{aprob_f} Seguras", delta_color="normal")
-                m3.metric("Rechazadas", rechaz_f, delta=f"-{rechaz_f} Fallas", delta_color="inverse")
+                m1.metric("Registros Evaluados", total_f)
+                m2.metric("Aprobaciones (Seguras)", aprob_f, delta=f"{aprob_f} Correctos")
+                m3.metric("Rechazos (Fallas SSO)", rechaz_f, delta=f"-{rechaz_f} Bloqueos", delta_color="inverse")
                 m4.metric("Índice de Seguridad", f"{porcentaje_seguro:.1f}%")
 
                 st.write("---")
 
-                # 📈 3. GRÁFICOS REACTIVOS
+                # 📈 3. GRÁFICOS AXIALES REACCIONANDO AL FILTRO
                 c1, c2 = st.columns(2)
                 
                 with c1:
-                    st.markdown("##### 👤 Desempeño por Técnico")
+                    st.markdown("##### 👤 Comportamiento Aprobado/Rechazado por Persona")
                     chart_data_ope = df_interactivo.groupby([col_ope, col_estado]).size().unstack(fill_value=0)
                     for col in ["APROBADO", "RECHAZADO"]:
                         if col not in chart_data_ope.columns: chart_data_ope[col] = 0
                     st.bar_chart(chart_data_ope[["APROBADO", "RECHAZADO"]], color=["#27AE60", "#CB6155"])
 
                 with c2:
-                    st.markdown("##### 🛠️ Estado Físico por TAG")
+                    st.markdown("##### 🛠️ Índice de Frecuencia de Fallas por TAG")
                     chart_data_tag = df_interactivo.groupby([col_tag, col_estado]).size().unstack(fill_value=0)
                     for col in ["APROBADO", "RECHAZADO"]:
                         if col not in chart_data_tag.columns: chart_data_tag[col] = 0
                     st.bar_chart(chart_data_tag[["APROBADO", "RECHAZADO"]], color=["#27AE60", "#CB6155"])
 
-                # 📋 4. TABLA DETALLADA (Invertida para ver lo nuevo primero)
+                # 📋 4. DATA FRAME VISUAL REDUCIDO (Únicamente las 3 columnas y el último registro arriba)
                 st.write("---")
-                st.markdown("#### 📄 Detalle de Registros Filtrados")
-                st.dataframe(df_interactivo.iloc[::-1], use_container_width=True, hide_index=True)
+                st.markdown("#### 📄 Tabla de Datos Simplificada (Operador, TAG, Estado)")
+                st.dataframe(
+                    df_interactivo.iloc[::-1], 
+                    use_container_width=True, 
+                    hide_index=True
+                )
                 
             else:
-                st.warning("🔎 No se encontraron datos que coincidan con los filtros aplicados.")
+                st.warning("🔎 No existen coincidencias para el Operador o TAG ingresado.")
 
         except Exception as e:
-            st.info("📡 Sincronizando datos maestros... Realice una inspección o espere un momento.")
+            st.info("📡 Cargando matriz analítica... Realice un escaneo en el Tótem para refrescar.")
