@@ -193,7 +193,7 @@ st.markdown("""
 if operador == "-- Seleccione un Técnico --":
     st.markdown("""
         <div class="warning-lock">
-            <h2>⚠️ CONTROL DE ACCESO RESTRINGIDO</h2>
+            <h2>⚠️ CONTROL DE ACCESO RESTRINGIDO SELECICONE UN TECNICO</h2>
             <p style="font-size: 18px;">Por políticas de SSO y control de guardia de Lundin Gold, 
             <b>debe seleccionar su Nombre y Apellido</b> en la barra lateral izquierda para desbloquear el Tótem Digital.</p>
         </div>
