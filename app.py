@@ -28,7 +28,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 2. URL MAESTRA DE TU WEB APP SCRIPT
-URL_WEB_APP_MAESTRA = "https://script.google.com/macros/s/AQUÍ_PEGA_TU_ID_DE_EXEC_DE_APPS_SCRIPT/exec"
+URL_WEB_APP_MAESTRA = "https://script.google.com/macros/s/AKfycbx3ApkYqq0X_6JKi5Vz8ZcdnjTpddQKj-XAiis-Klu2EKFY7ONIQurwMe-qWWSURSMG9w/exec"
 
 # 3. CONEXIÓN DINÁMICA AL INVENTARIO DE GOOGLE SHEETS
 ID_DOCUMENTO = "1et_T6dZZWpCc2Q4BMrASdo76mGtIvBLeaBdBR358RS0"
