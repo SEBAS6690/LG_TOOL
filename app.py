@@ -117,6 +117,64 @@ with st.sidebar:
         st.markdown(f'<div class="metric-card"><h4 style="color:green;">{aprobados}</h4><small>Seguras</small></div>', unsafe_allow_html=True)
     with col_m2:
         st.markdown(f'<div class="metric-card"><h4 style="color:red;">{rechazados}</h4><small>Inseguras</small></div>', unsafe_allow_html=True)
+
+# ==========================================
+# ⚙️ MÓDULO: ADMINISTRACIÓN DE INVENTARIO
+# ==========================================
+with st.sidebar:
+    st.write("---")
+    with st.expander("🛠️ Panel de Administración (Añadir Equipos)"):
+        st.markdown("##### Registrar Nueva Herramienta o Ítems")
+        
+        # Campos del formulario interno
+        nuevo_tag = st.text_input("Etiqueta (TAG):", placeholder="Ej. HERR-AMO-046").strip().upper()
+        nuevo_nombre = st.text_input("Nombre del Equipo:", placeholder="Ej. Amoladora Angular 7\"")
+        nueva_marca = st.text_input("Marca:", placeholder="Ej. Bosch")
+        nuevo_serial = st.text_input("Número de Serial:", placeholder="Ej. SN-987654")
+        nueva_img = st.text_input("Enlace de Imagen (URL):", placeholder="https://...")
+        
+        st.markdown("**Puntos Críticos de Control:**")
+        np1 = st.text_input("Punto 1:", placeholder="Ej. Estado del cable de alimentación")
+        np2 = st.text_input("Punto 2:", placeholder="Ej. Guarda de protección colocada")
+        np3 = st.text_input("Punto 3:", placeholder="Ej. Ajuste de disco con llave")
+        np4 = st.text_input("Punto 4:", placeholder="Ej. Interruptor de hombre muerto operativo")
+        np5 = st.text_input("Punto 5:", placeholder="Ej. Uso de EPP específico (Caretas)")
+
+        if st.button("➕ Guardar en Inventario Maestro", key="btn_guardar_nuevo_item"):
+            if not nuevo_tag or not nuevo_nombre:
+                st.error("❌ El TAG y el Nombre son campos obligatorios.")
+            else:
+                # URL de envío de respuestas de TU FORMULARIO DE INVENTARIO
+                URL_FORM_INVENTARIO = "https://docs.google.com/forms/d/e/TU_CODIGO_DE_FORM_DE_INVENTARIO/formResponse"
+                
+                # Mapeo de datos con tus entry reales de la pestaña Inventario
+                datos_inventario = {
+                    "entry.111111111": nuevo_tag,       # Reemplaza con tu entry real de TAG
+                    "entry.222222222": nuevo_nombre,    # Reemplaza con tu entry real de Nombre
+                    "entry.333333333": nueva_marca,     # Reemplaza con tu entry real de Marca
+                    "entry.444444444": nuevo_serial,    # Reemplaza con tu entry real de Serial
+                    "entry.555555555": nueva_img,       # Reemplaza con tu entry real de Imagen
+                    "entry.666666666": np1,             # Reemplaza con tu entry real de Punto1
+                    "entry.777777777": np2,             # Reemplaza con tu entry real de Punto2
+                    "entry.888888888": np3,             # Reemplaza con tu entry real de Punto3
+                    "entry.999999999": np4,             # Reemplaza con tu entry real de Punto4
+                    "entry.000000000": np5              # Reemplaza con tu entry real de Punto5
+                }
+                
+                try:
+                    # Envío asíncrono a la base de datos
+                    respuesta = requests.post(URL_FORM_INVENTARIO, data=datos_inventario)
+                    if respuesta.status_code == 200:
+                        st.success(f"✅ ¡{nuevo_tag} registrado exitosamente!")
+                        # Limpiar el caché para que la app lea los nuevos datos de inmediato
+                        st.cache_data.clear()
+                        st.rerun()
+                    else:
+                        st.error("❌ Error de comunicación con el servidor de Sheets.")
+                except Exception as e:
+                    st.error(f"⚠️ Error al conectar: {e}")
+
+
 # 5. PANEL PRINCIPAL (Encabezado)
 st.markdown("""
     <div class="title-banner">
