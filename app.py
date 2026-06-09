@@ -123,15 +123,16 @@ with st.sidebar:
 # ==========================================
 with st.sidebar:
     st.write("---")
-    with st.expander("🛠️ Panel de Administración (Añadir Equipos)"):
+   with st.expander("🛠️ Panel de Administración (Añadir Equipos)"):
         st.markdown("##### Registrar Nueva Herramienta o Ítems")
         
-        # Campos del formulario interno
+        # Campos de entrada de la interfaz
         nuevo_tag = st.text_input("Etiqueta (TAG):", placeholder="Ej. HERR-AMO-046").strip().upper()
         nuevo_nombre = st.text_input("Nombre del Equipo:", placeholder="Ej. Amoladora Angular 7\"")
         nueva_marca = st.text_input("Marca:", placeholder="Ej. Bosch")
         nuevo_serial = st.text_input("Número de Serial:", placeholder="Ej. SN-987654")
         nueva_img = st.text_input("Enlace de Imagen (URL):", placeholder="https://...")
+        nueva_cat = st.selectbox("Categoría SSO:", ["CONSTRUCCION", "MECANICA", "ELECTRICA", "MINERIA"])
         
         st.markdown("**Puntos Críticos de Control:**")
         np1 = st.text_input("Punto 1:", placeholder="Ej. Estado del cable de alimentación")
@@ -139,13 +140,15 @@ with st.sidebar:
         np3 = st.text_input("Punto 3:", placeholder="Ej. Ajuste de disco con llave")
         np4 = st.text_input("Punto 4:", placeholder="Ej. Interruptor de hombre muerto operativo")
         np5 = st.text_input("Punto 5:", placeholder="Ej. Uso de EPP específico (Caretas)")
+        np6 = st.text_input("Punto 6:", placeholder="Ej. Inspección visual de carcasa")
+        np7 = st.text_input("Punto 7:", placeholder="Ej. Estado de mangos de sujeción")
 
         if st.button("➕ Guardar en Inventario Maestro", key="btn_guardar_nuevo_item"):
             if not nuevo_tag or not nuevo_nombre:
                 st.error("❌ El TAG y el Nombre son campos obligatorios.")
             else:
-                # 🛠️ Diccionario limpio en texto plano puro (SIN USAR JSON)
-                # La clave "tipo_registro": "inventario" es la señal para el Apps Script
+                # 📦 Diccionario de datos en texto plano puro (SIN USAR JSON)
+                # "tipo_registro": "inventario" le indica al Apps Script que use la pestaña de Inventario
                 datos_inventario = {
                     "tipo_registro": "inventario",  
                     "tag": str(nuevo_tag),
@@ -153,23 +156,23 @@ with st.sidebar:
                     "marca": str(nueva_marca),
                     "serial": str(nuevo_serial),
                     "imagen": str(nueva_img),
-                    "categoria": str(nueva_cat) if 'nueva_cat' in locals() else "CONSTRUCCION",
+                    "categoria": str(nueva_cat),
                     "p1": str(np1), 
                     "p2": str(np2), 
                     "p3": str(np3), 
                     "p4": str(np4), 
                     "p5": str(np5), 
-                    "p6": str(np6) if 'np6' in locals() else "", 
-                    "p7": str(np7) if 'np7' in locals() else ""
+                    "p6": str(np6), 
+                    "p7": str(np7)
                 }
                 
                 try:
-                    # 🚨 MANDAMOS LOS DATOS A LA APLICACIÓN WEB MAESTRA (La que termina en /exec)
-                    # Eliminamos para siempre la URL vieja de Google Forms
+                    # 🚀 Enviamos usando la URL Maestra de Apps Script pasándole los parámetros limpiamente
                     respuesta = requests.post(URL_WEB_APP_MAESTRA, data=datos_inventario, params=datos_inventario, timeout=10)
                     
                     if respuesta.status_code == 200:
                         st.success(f"✅ ¡{nuevo_tag} registrado en la pestaña INVENTARIO exitosamente!")
+                        # Limpiar caché para que el pañol y el buscador QR lean la nueva herramienta de inmediato
                         st.cache_data.clear()
                         st.rerun()
                     else:
