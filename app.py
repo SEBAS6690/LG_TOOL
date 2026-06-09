@@ -193,7 +193,7 @@ if codigo_input:
                     
                     # 🚨 1. CORRIGE ESTA URL CON LA DE TU FORMULARIO ACTUAL DE RESPUESTAS.
                     # Asegúrate de abrir el formulario, hacer clic en "Enviar" -> Enlace largo -> Copiar el ID real.
-                    URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSfD_Xxxxxxxxxx_Coloca_Tu_ID_Correcto_Aqui_xxxxxxxxx/formResponse"
+                    URL_FORM = "https://docs.google.com/spreadsheets/d/1et_T6dZZWpCc2Q4BMrASdo76mGtIvBLeaBdBR358RS0/edit?usp=sharing/formResponse"
                     
                     # 🚨 2. COLOQUE AQUÍ SUS CÓDIGOS ENTRY OBTENIDOS DESDE LA VISTA PREVIA (F12) DEL FORMULARIO
                     datos_envio = {
