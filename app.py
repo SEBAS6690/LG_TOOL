@@ -144,36 +144,38 @@ with st.sidebar:
             if not nuevo_tag or not nuevo_nombre:
                 st.error("❌ El TAG y el Nombre son campos obligatorios.")
             else:
-                # URL de envío de respuestas de TU FORMULARIO DE INVENTARIO
-                
-                URL_FORM_INVENTARIO = "https://docs.google.com/forms/d/e/1FAIpQLSecO_N06RlShHidRPO3JYuveetxHHqqdOpPHisMeMuTdT5Omw/formResponse"
-                
-                # Mapeo de datos con tus entry reales de la pestaña Inventario
+                # 🛠️ Diccionario limpio en texto plano puro (SIN USAR JSON)
+                # La clave "tipo_registro": "inventario" es la señal para el Apps Script
                 datos_inventario = {
-                    "entry.111111111": nuevo_tag,       # Reemplaza con tu entry real de TAG
-                    "entry.222222222": nuevo_nombre,    # Reemplaza con tu entry real de Nombre
-                    "entry.333333333": nueva_marca,     # Reemplaza con tu entry real de Marca
-                    "entry.444444444": nuevo_serial,    # Reemplaza con tu entry real de Serial
-                    "entry.555555555": nueva_img,       # Reemplaza con tu entry real de Imagen
-                    "entry.666666666": np1,             # Reemplaza con tu entry real de Punto1
-                    "entry.777777777": np2,             # Reemplaza con tu entry real de Punto2
-                    "entry.888888888": np3,             # Reemplaza con tu entry real de Punto3
-                    "entry.999999999": np4,             # Reemplaza con tu entry real de Punto4
-                    "entry.000000000": np5              # Reemplaza con tu entry real de Punto5
+                    "tipo_registro": "inventario",  
+                    "tag": str(nuevo_tag),
+                    "nombre": str(nuevo_nombre),
+                    "marca": str(nueva_marca),
+                    "serial": str(nuevo_serial),
+                    "imagen": str(nueva_img),
+                    "categoria": str(nueva_cat) if 'nueva_cat' in locals() else "CONSTRUCCION",
+                    "p1": str(np1), 
+                    "p2": str(np2), 
+                    "p3": str(np3), 
+                    "p4": str(np4), 
+                    "p5": str(np5), 
+                    "p6": str(np6) if 'np6' in locals() else "", 
+                    "p7": str(np7) if 'np7' in locals() else ""
                 }
                 
                 try:
-                    # Envío asíncrono a la base de datos
-                    respuesta = requests.post(URL_FORM_INVENTARIO, data=datos_inventario)
+                    # 🚨 MANDAMOS LOS DATOS A LA APLICACIÓN WEB MAESTRA (La que termina en /exec)
+                    # Eliminamos para siempre la URL vieja de Google Forms
+                    respuesta = requests.post(URL_WEB_APP_MAESTRA, data=datos_inventario, params=datos_inventario, timeout=10)
+                    
                     if respuesta.status_code == 200:
-                        st.success(f"✅ ¡{nuevo_tag} registrado exitosamente!")
-                        # Limpiar el caché para que la app lea los nuevos datos de inmediato
+                        st.success(f"✅ ¡{nuevo_tag} registrado en la pestaña INVENTARIO exitosamente!")
                         st.cache_data.clear()
                         st.rerun()
                     else:
-                        st.error("❌ Error de comunicación con el servidor de Sheets.")
+                        st.error(f"❌ Error de comunicación con el servidor: {respuesta.status_code}")
                 except Exception as e:
-                    st.error(f"⚠️ Error al conectar: {e}")
+                    st.error(f"⚠️ Error al conectar con el servidor de Sheets: {e}")
 
 
 # 5. PANEL PRINCIPAL (Encabezado)
