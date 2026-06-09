@@ -467,31 +467,22 @@ else:
             st.info("📡 Sincronizando datos maestros... Realice una inspección para inicializar los gráficos.")
 
     # =========================================================================
-    # 🖨️ AL FINAL: NUEVO MÓDULO DE VISUALIZACIÓN E IMPRESIÓN DE QR (COLUMNA Q)
+    # 🖨️ AL FINAL ABSOLUTO: NUEVO MÓDULO DE VISUALIZACIÓN E IMPRESIÓN DE QR (COLUMNA Q)
     # =========================================================================
     st.write("---")
-    
-    # Este expander se ubica al final de la página para uso exclusivo del pañolero o supervisor
     with st.expander("🖨️ Estación de Etiquetado: Ver e Imprimir Códigos QR de Inventario"):
         st.markdown("##### Buscador de Activos para Impresión Térmica de Placas")
         
         if HERRAMIENTAS_DB:
-            # Desplegable ordenado con todos los TAGs disponibles en el maestro
             lista_tags_disponibles = sorted(list(HERRAMIENTAS_DB.keys()))
-            tag_seleccionado = st.selectbox(
-                "Seleccione el TAG del Equipo a Consultar:", 
-                lista_tags_disponibles, 
-                key="sb_modulo_impresion_final_q"
-            )
+            tag_seleccionado = st.selectbox("Seleccione el TAG del Equipo a Consultar:", lista_tags_disponibles, key="sb_modulo_impresion_final_q")
             
             info_equipo = HERRAMIENTAS_DB[tag_seleccionado]
             
-            # Mapeo de la columna Q (Cambia 'qr_url' o 'imagen' según cómo cargues tu diccionario)
-            url_codigo_qr = info_equipo.get('qr_url', info_equipo.get('imagen', ''))
+            # 🎯 JALA DIRECTO LA COLUMNA Q MAPEADA COMO 'QR'
+            url_codigo_qr = info_equipo.get('QR', '')
             
-            # Distribución: Datos a la izquierda, miniatura del QR a la derecha
             col_info_print, col_preview_qr = st.columns([2, 1])
-            
             with col_info_print:
                 st.markdown(f"**🛠️ Herramienta:** {info_equipo['nombre']}")
                 st.markdown(f"**🏷️ Marca:** {info_equipo['marca']}")
@@ -499,10 +490,8 @@ else:
                 st.markdown(f"**🛡️ Categoría de Riesgo:** `{info_equipo['categoria']}`")
                 
                 st.write("")
-                # Botón Nuevo para ejecutar la cola de impresión local
                 if url_codigo_qr and str(url_codigo_qr).strip() != "":
                     if st.button("🖨️ Enviar a Impresora Térmica", key="btn_trigger_print_final_q", use_container_width=True):
-                        # JavaScript para aislar el QR con dimensiones de ticket (350x350px)
                         js_printer_command = f"""
                         <script>
                             var ventanaImpresion = window.open('', '_blank', 'width=350,height=350');
@@ -521,8 +510,8 @@ else:
             
             with col_preview_qr:
                 if url_codigo_qr and str(url_codigo_qr).strip() != "":
-                    st.image(url_codigo_qr, caption=f"Vista Previa QR: {tag_seleccionado}", width=140)
+                    st.image(url_codigo_qr, caption=f"Vista Previa QR (Col. Q): {tag_seleccionado}", width=140)
                 else:
-                    st.error("❌ QR No Disponible")
+                    st.error("❌ QR No Disponible en Columna Q")
         else:
-            st.info("📌 Base de datos de inventario vacía o en proceso de sincronización.")
+            st.info("📌 Base de datos de inventario en proceso de sincronización.")
