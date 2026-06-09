@@ -1,3 +1,19 @@
+import os
+import subprocess
+import sys
+
+# 🚀 SISTEMA AUTO-INSTALADOR DE DEPENDENCIAS EN LA NUBE
+try:
+    from streamlit_camera_input_live import camera_input_live
+    import cv2
+except ModuleNotFoundError:
+    # Si falta alguna librería, Python la descarga directamente en el servidor
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "streamlit-camera-input-live", "opencv-python-headless", "numpy"])
+    # Forzar la recarga de los módulos instalados
+    import os
+    st = sys.modules.get('streamlit')
+    if st:
+        st.rerun()
 import streamlit as st
 import pandas as pd
 import datetime
