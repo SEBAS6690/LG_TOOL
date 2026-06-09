@@ -23,7 +23,7 @@ st.markdown("""
     .danger-box { padding: 20px; background-color: #FADBD8; border-left: 6px solid #CD6155; border-radius: 5px; margin-bottom: 15px; color: #78281F; }
     .success-box { padding: 20px; background-color: #D4EFDF; border-left: 6px solid #27AE60; border-radius: 5px; margin-bottom: 15px; color: #145A32; }
     .metric-card { background-color: white; padding: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #E5E7E9; text-align: center; }
-    .warning-lock { padding: 30px; background-color: #FFF2CC; border-left: 8px solid #FFC72C; border-radius: 8px; color: #7F6000; text-align: center; margin-top: 50px; }
+    .warning-lock { padding: 30px; background-color: #FFF2CC; border-left: 8px solid #FFC72C; border-radius: 8px; color: #7F6000; text-align: center; margin-top: 15px; margin-bottom: 20px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -86,20 +86,10 @@ except Exception:
     df_historico_real = pd.DataFrame()
 
 # ==========================================
-# BARRA LATERAL (SIDEBAR)
+# BARRA LATERAL (MÉTRICAS DEL TURNO SOLAMENTE)
 # ==========================================
 with st.sidebar:
     st.image("https://www.lundingold.com/assets/img/logo.png", width=180)
-    st.markdown("### ⚙️ Configuración del Tótem")
-    
-    operador = st.selectbox(
-        "👤 Nombre del Operador / Técnico:",
-        options=["-- Seleccione un Técnico --"] + LISTA_OPERADORES
-    )
-    
-    area_trabajo = st.selectbox("🏢 Área de Destino:", ["Contratista", "Electrico Planta Proc.", "Mecanicos Planta","Planta de pasta","Mecanicos Planta","Operadores planta"])
-    
-    st.write("---")
     st.markdown("### 📊 Métricas de Turno Real")
     
     if not df_historico_real.empty and "ESTADO" in df_historico_real.columns:
@@ -114,17 +104,14 @@ with st.sidebar:
     with col_m2:
         st.markdown(f'<div class="metric-card"><h4 style="color:red;">{rechazados}</h4><small>Inseguras</small></div>', unsafe_allow_html=True)
 
-# # ==========================================
-# ⚙️ MÓDULO: GESTIÓN DE INVENTARIO ÉLITE
+# ==========================================
+# ⚙️ MÓDULO: GESTIÓN DE INVENTARIO ÉLITE (BARRA LATERAL)
 # ==========================================
 with st.sidebar:
     st.write("---")
     with st.expander("🛠️ Panel de Control y Gestión de Inventario"):
-        
-        # 🔓 SECCIÓN ABIERTA: VISUALIZACIÓN Y BÚSQUEDA LIBRE
         st.markdown("##### 📦 Consulta de Equipos en Pañol")
         
-        # Buscador dinámico por Serial o TAG (Visible para todos)
         buscar_admin = st.text_input(
             "🔍 Buscar por Serial o TAG:", 
             placeholder="Ej. SN-987654 o HERR-...", 
@@ -136,44 +123,26 @@ with st.sidebar:
                 df_mini_inv = pd.DataFrame.from_dict(HERRAMIENTAS_DB, orient='index').reset_index()
                 df_mini_inv.rename(columns={'index': 'TAG', 'nombre': 'Nombre', 'serial': 'Serial'}, inplace=True)
                 
-                # Filtrado instantáneo en caliente
                 if buscar_admin:
                     df_mini_inv = df_mini_inv[
                         df_mini_inv['Serial'].astype(str).str.upper().str.contains(buscar_admin) | 
                         df_mini_inv['TAG'].astype(str).str.upper().str.contains(buscar_admin)
                     ]
                 
-                # Despliegue de la tabla libre
-                st.dataframe(
-                    df_mini_inv[["TAG", "Nombre", "Serial"]], 
-                    hide_index=True, 
-                    use_container_width=True
-                )
-                if buscar_admin:
-                    st.caption(f"💡 Coincidencias encontradas: {len(df_mini_inv)}")
+                st.dataframe(df_mini_inv[["TAG", "Nombre", "Serial"]], hide_index=True, use_container_width=True)
             else:
                 st.info("📌 No se registran equipos en el pañol local.")
         except Exception:
             st.error("🔄 Error al cargar la vista previa del inventario.")
             
         st.write("---")
-        
-        # 🔒 SECCIÓN RESTRINGIDA: REGISTRO DE NUEVOS EQUIPOS (CON CLAVE)
         st.markdown("##### ➕ Alta de Nuevas Herramientas")
         
-        CLAVE_ACCESO_CORRECTA = "Lundin2026"  # Tu PIN maestro
-        
-        clave_ingresada = st.text_input(
-            "🔑 Contraseña para Añadir Equipos:", 
-            type="password", 
-            placeholder="Clave de Supervisor SSO",
-            key="admin_password_lock"
-        )
+        CLAVE_ACCESO_CORRECTA = "Lundin2026"
+        clave_ingresada = st.text_input("🔑 Contraseña para Añadir Equipos:", type="password", placeholder="Clave de Supervisor SSO", key="admin_password_lock")
         
         if clave_ingresada == CLAVE_ACCESO_CORRECTA:
             st.success("🔓 Modo Editor Habilitado")
-            
-            # Campos del formulario de registro (Solo aparecen con clave correcta)
             nuevo_tag = st.text_input("Etiqueta (TAG):", placeholder="Ej. HERR-AMO-046", key="inv_tag").strip().upper()
             nuevo_nombre = st.text_input("Nombre del Equipo:", placeholder="Ej. Amoladora Angular 7\"", key="inv_nombre")
             nueva_marca = st.text_input("Marca:", placeholder="Ej. Bosch", key="inv_marca")
@@ -182,13 +151,11 @@ with st.sidebar:
             nueva_cat = st.selectbox("Categoría SSO:", ["CONSTRUCCION", "MECANICA", "ELECTRICA", "MINERIA"], key="inv_cat")
             
             st.markdown("**Puntos Críticos de Control:**")
-            np1 = st.text_input("Punto 1:", placeholder="Ej. Estado del cable de alimentación", key="inv_p1")
-            np2 = st.text_input("Punto 2:", placeholder="Ej. Guarda de protección colocada", key="inv_p2")
-            np3 = st.text_input("Punto 3:", placeholder="Ej. Ajuste de disco con llave", key="inv_p3")
-            np4 = st.text_input("Punto 4:", placeholder="Ej. Interruptor de hombre muerto operativo", key="inv_p4")
-            np5 = st.text_input("Punto 5:", placeholder="Ej. Uso de EPP específico (Caretas)", key="inv_p5")
-            np6 = st.text_input("Punto 6:", placeholder="Ej. Interruptor de hombre muerto operativo", key="inv_p6")
-            np7 = st.text_input("Punto 7:", placeholder="Ej. Uso de EPP específico (Caretas)", key="inv_p7")
+            np1 = st.text_input("Punto 1:", placeholder="Ej. Estado del cable", key="inv_p1")
+            np2 = st.text_input("Punto 2:", placeholder="Ej. Guarda colocada", key="inv_p2")
+            np3 = st.text_input("Punto 3:", placeholder="Ej. Ajuste de disco", key="inv_p3")
+            np4 = st.text_input("Punto 4:", placeholder="Ej. Interruptor operativo", key="inv_p4")
+            np5 = st.text_input("Punto 5:", placeholder="Ej. Uso de Careta", key="inv_p5")
             
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
@@ -210,26 +177,23 @@ with st.sidebar:
                         "tag": str(nuevo_tag), "nombre": str(nuevo_nombre), "marca": str(nueva_marca),
                         "serial": str(nuevo_serial), "imagen": str(nueva_img), "categoria": str(nueva_cat),
                         "p1": str(np1), "p2": str(np2), "p3": str(np3), "p4": str(np4), "p5": str(np5),
-                        "p6": str(np6), "p7": str(np7)
+                        "p6": "", "p7": ""
                     }
                     try:
                         respuesta = requests.post(URL_WEB_APP_MAESTRA, data=datos_inventario, params=datos_inventario, timeout=10)
                         if respuesta.status_code == 200:
-                            st.success(f"✅ ¡{nuevo_tag} guardado con éxito en Sheets!")
+                            st.success(f"✅ ¡{nuevo_tag} guardado con éxito!")
                             st.cache_data.clear()
                             st.rerun()
-                        else:
-                            st.error(f"❌ Error de comunicación: {respuesta.status_code}")
                     except Exception as e:
                         st.error(f"⚠️ Error al conectar: {e}")
-                        
         elif clave_ingresada != "":
-            st.error("❌ Contraseña Incorrecta. Función de escritura bloqueada.")
+            st.error("❌ Contraseña Incorrecta.")
         else:
-            st.info("💡 Ingrese la contraseña de Supervisor si necesita añadir una herramienta nueva al maestro.")
+            st.info("💡 Ingrese la contraseña de Supervisor si necesita añadir una herramienta.")
 
 # ==========================================
-# 5. PANEL PRINCIPAL (Encabezado)
+# 5. PANEL PRINCIPAL (ÁREA CENTRAL)
 # ==========================================
 st.markdown("""
     <div class="title-banner">
@@ -238,17 +202,36 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# 🔐 CANDADO DE SEGURIDAD INDUSTRIAL OBLIGATORIO
+# 👤 UBICACIÓN CENTRAL DEL SELECTOR DE TÉCNICOS Y ÁREA DE TRABAJO
+st.markdown("### 📋 Registro de Turno Obligatorio")
+col_c1, col_c2 = st.columns(2)
+
+with col_c1:
+    operador = st.selectbox(
+        "👤 Nombre del Operador / Técnico Firmante:",
+        options=["-- Seleccione un Técnico --"] + LISTA_OPERADORES,
+        key="main_operador_selector"
+    )
+
+with col_c2:
+    area_trabajo = st.selectbox(
+        "🏢 Área de Destino de la Herramienta:", 
+        ["Mantenimiento Mina", "Planta de Beneficio", "Talleres Mecánicos", "Subestación Eléctrica"],
+        key="main_area_selector"
+    )
+
+# 🔐 CANDADO DE SEGURIDAD INDUSTRIAL CENTRALIZADO
 if operador == "-- Seleccione un Técnico --":
     st.markdown("""
         <div class="warning-lock">
-            <h2>⚠️ CONTROL DE ACCESO RESTRINGIDO SELECICONE UN TECNICO</h2>
+            <h2>⚠️ CONTROL DE ACCESO RESTRINGIDO</h2>
             <p style="font-size: 18px;">Por políticas de SSO y control de guardia de Lundin Gold, 
-            <b>debe seleccionar su Nombre y Apellido</b> en la barra lateral izquierda para desbloquear el Tótem Digital.</p>
+            <b>seleccione su Nombre y Apellido en el menú de arriba</b> para desbloquear la estación de validación.</p>
         </div>
     """, unsafe_allow_html=True)
 else:
-    # 🔓 SI SELECCIONÓ UN TÉCNICO, SE DESBLOQUEA TODO EL CONTENIDO ABAJO:
+    # 🔓 CONTENIDO DESBLOQUEADO INSTANTÁNEAMENTE AL SELECCIONAR TÉCNICO:
+    st.write("---")
 
     # PASO 1: ESCANEO DE CÓDIGO QR CON LA CÁMARA
     st.markdown("### 🔍 PASO 1: Escaneo de Código QR")
@@ -363,65 +346,33 @@ else:
         else:
             st.error("❌ El código escaneado o ingresado no corresponde a ningún activo registrado en el pañol.")
 
-# ==========================================
-# 7. HISTORIAL VISUAL EN TIEMPO REAL CON BUSCADOR
-# ==========================================
-st.write("---")
-st.markdown("### 📋 Registro Histórico de Inspecciones (Tiempo Real)")
+    # 7. HISTORIAL VISUAL EN TIEMPO REAL CON BUSCADOR
+    st.write("---")
+    st.markdown("### 📋 Registro Histórico de Inspecciones (Tiempo Real)")
 
-try:
-    # 📥 Descarga las respuestas actuales directamente de la nube
-    df_historico = pd.read_csv(URL_RESPUESTAS)
-    
-    if not df_historico.empty:
-        # 🔍 INTERFAZ DE BÚSQUEDA DINÁMICA
-        # Creamos dos columnas para buscar por TAG o por Operador en paralelo
+    try:
         col_bus1, col_bus2 = st.columns(2)
-        
         with col_bus1:
-            busqueda_tag = st.text_input(
-                "🔍 Buscar por TAG / Código QR:", 
-                placeholder="Ej. HERR-AMO-046", 
-                key="search_tag"
-            ).strip().upper()
-            
+            busqueda_tag = st.text_input("🔍 Buscar por TAG / Código QR:", placeholder="Ej. HERR-AMO-046", key="search_tag").strip().upper()
         with col_bus2:
-            busqueda_operador = st.text_input(
-                "👤 Filtrar por Nombre del Técnico:", 
-                placeholder="Ej. Víctor", 
-                key="search_operador"
-            ).strip()
+            busqueda_operador = st.text_input("👤 Filtrar por Nombre del Técnico:", placeholder="Ej. Víctor", key="search_operador").strip()
 
-        # 🧠 FILTRADO INTELIGENTE (No importa si escriben en mayúsculas o minúsculas)
-        # Primero invertimos el orden para que lo más nuevo salga arriba
-        df_filtrado = df_historico.iloc[::-1]
+        df_filtrado = df_historico_real.iloc[::-1]
         
         if busqueda_tag:
-            # Filtra si la columna 'TAG' (o la 4ta columna) contiene el texto buscado
-            # Nota: Ajustamos el filtro usando .iloc o el nombre de columna detectado
             col_tag_name = [c for c in df_filtrado.columns if 'TAG' in str(c).upper() or 'CÓDIGO' in str(c).upper()]
             if col_tag_name:
                 df_filtrado = df_filtrado[df_filtrado[col_tag_name[0]].astype(str).str.upper().str.contains(busqueda_tag)]
                 
         if busqueda_operador:
-            # Filtra si la columna 'OPERADOR' contiene el nombre ingresado
             col_ope_name = [c for c in df_filtrado.columns if 'OPERADOR' in str(c).upper() or 'TÉCNICO' in str(c).upper()]
             if col_ope_name:
                 df_filtrado = df_filtrado[df_filtrado[col_ope_name[0]].astype(str).str.upper().str.contains(busqueda_operador.upper())]
 
-        # 📊 DESPLIEGUE DE LA TABLA FILTRADA
         if not df_filtrado.empty:
-            st.dataframe(
-                df_filtrado, 
-                use_container_width=True, 
-                hide_index=True
-            )
+            st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
             st.caption(f"💡 Mostrando {len(df_filtrado)} registros encontrados.")
         else:
-            st.warning("⚠️ No se encontraron inspecciones que coincidan con los criterios de búsqueda.")
-            
-    else:
-        st.info("📌 Aún no hay registros guardados en la base de datos central.")
-        
-except Exception as e:
-    st.warning("🔄 Cargando actualización del historial... Realice una nueva inspección o refresque la página.")
+            st.warning("⚠️ No se encontraron inspecciones.")
+    except Exception:
+        pass
