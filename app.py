@@ -114,24 +114,55 @@ with st.sidebar:
     with col_m2:
         st.markdown(f'<div class="metric-card"><h4 style="color:red;">{rechazados}</h4><small>Inseguras</small></div>', unsafe_allow_html=True)
 
-# ==========================================
+# # ==========================================
 # ⚙️ MÓDULO: ADMINISTRACIÓN DE INVENTARIO
 # ==========================================
 with st.sidebar:
     st.write("---")
     with st.expander("🛠️ Panel de Administración (Gestión de Inventario)"):
+        
+        # 📋 SUB-MÓDULO 1: VISUALIZACIÓN Y BÚSQUEDA DEL INVENTARIO ACTUAL
         st.markdown("##### 📦 Equipos en Base de Datos")
+        
+        # 🔍 NUEVO: Buscador interno por Serial o TAG para el Administrador
+        buscar_admin = st.text_input(
+            "🔍 Buscar por Serial o TAG en Pañol:", 
+            placeholder="Ej. SN-987654 o HERR-...", 
+            key="search_admin_inv"
+        ).strip().upper()
+        
         try:
             if HERRAMIENTAS_DB:
+                # Convertimos el diccionario maestro a un DataFrame para manipularlo fácil
                 df_mini_inv = pd.DataFrame.from_dict(HERRAMIENTAS_DB, orient='index').reset_index()
-                df_mini_inv.rename(columns={'index': 'TAG', 'nombre': 'Nombre'}, inplace=True)
-                st.dataframe(df_mini_inv[["TAG", "Nombre"]], hide_index=True, use_container_width=True)
+                df_mini_inv.rename(columns={'index': 'TAG', 'nombre': 'Nombre', 'serial': 'Serial'}, inplace=True)
+                
+                # Filtrado dinámico en tiempo real si el usuario escribe algo
+                if buscar_admin:
+                    df_mini_inv = df_mini_inv[
+                        df_mini_inv['Serial'].astype(str).str.upper().str.contains(buscar_admin) | 
+                        df_mini_inv['TAG'].astype(str).str.upper().str.contains(buscar_admin)
+                    ]
+                
+                # Mostramos TAG, Nombre y Serial para un control completo
+                st.dataframe(
+                    df_mini_inv[["TAG", "Nombre", "Serial"]], 
+                    hide_index=True, 
+                    use_container_width=True
+                )
+                if buscar_admin:
+                    st.caption(f"💡 Coincidencias encontradas: {len(df_mini_inv)}")
+            else:
+                st.info("📌 No se registran equipos en el pañol local.")
         except Exception:
-            pass
+            st.error("🔄 Error al cargar la vista previa del inventario.")
             
         st.write("---")
+        
+        # ➕ SUB-MÓDULO 2: REGISTRO DE NUEVAS HERRAMIENTAS
         st.markdown("##### ➕ Registrar Nueva Herramienta o Ítems")
         
+        # Campos del formulario interno
         nuevo_tag = st.text_input("Etiqueta (TAG):", placeholder="Ej. HERR-AMO-046", key="inv_tag").strip().upper()
         nuevo_nombre = st.text_input("Nombre del Equipo:", placeholder="Ej. Amoladora Angular 7\"", key="inv_nombre")
         nueva_marca = st.text_input("Marca:", placeholder="Ej. Bosch", key="inv_marca")
@@ -140,11 +171,11 @@ with st.sidebar:
         nueva_cat = st.selectbox("Categoría SSO:", ["CONSTRUCCION", "MECANICA", "ELECTRICA", "MINERIA"], key="inv_cat")
         
         st.markdown("**Puntos Críticos de Control:**")
-        np1 = st.text_input("Punto 1:", placeholder="Ej. Estado del cable", key="inv_p1")
-        np2 = st.text_input("Punto 2:", placeholder="Ej. Guarda colocada", key="inv_p2")
-        np3 = st.text_input("Punto 3:", placeholder="Ej. Ajuste de disco", key="inv_p3")
-        np4 = st.text_input("Punto 4:", placeholder="Ej. Interruptor operativo", key="inv_p4")
-        np5 = st.text_input("Punto 5:", placeholder="Ej. Uso de Careta", key="inv_p5")
+        np1 = st.text_input("Punto 1:", placeholder="Ej. Estado del cable de alimentación", key="inv_p1")
+        np2 = st.text_input("Punto 2:", placeholder="Ej. Guarda de protección colocada", key="inv_p2")
+        np3 = st.text_input("Punto 3:", placeholder="Ej. Ajuste de disco con llave", key="inv_p3")
+        np4 = st.text_input("Punto 4:", placeholder="Ej. Interruptor de hombre muerto operativo", key="inv_p4")
+        np5 = st.text_input("Punto 5:", placeholder="Ej. Uso de EPP específico (Caretas)", key="inv_p5")
         
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
@@ -163,15 +194,19 @@ with st.sidebar:
             else:
                 datos_inventario = {
                     "tipo_registro": "inventario",  
-                    "tag": str(nuevo_tag), "nombre": str(nuevo_nombre), "marca": str(nueva_marca),
-                    "serial": str(nuevo_serial), "imagen": str(nueva_img), "categoria": str(nueva_cat),
+                    "tag": str(nuevo_tag),
+                    "nombre": str(nuevo_nombre),
+                    "marca": str(nueva_marca),
+                    "serial": str(nuevo_serial),
+                    "imagen": str(nueva_img),
+                    "categoria": str(nueva_cat),
                     "p1": str(np1), "p2": str(np2), "p3": str(np3), "p4": str(np4), "p5": str(np5),
                     "p6": "", "p7": ""
                 }
                 try:
                     respuesta = requests.post(URL_WEB_APP_MAESTRA, data=datos_inventario, params=datos_inventario, timeout=10)
                     if respuesta.status_code == 200:
-                        st.success(f"✅ ¡{nuevo_tag} registrado en la pestaña INVENTARIO!")
+                        st.success(f"✅ ¡{nuevo_tag} registrado en la pestaña INVENTARIO con éxito!")
                         st.cache_data.clear()
                         st.rerun()
                     else:
