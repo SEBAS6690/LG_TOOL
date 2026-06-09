@@ -346,96 +346,98 @@ else:
         else:
             st.error("❌ El código escaneado o ingresado no corresponde a ningún activo registrado en el pañol.")
 # ==========================================
-    # 7. HISTORIAL Y DASHBOARD GRÁFICO INTEGRADO
+    # 7. DASHBOARD GRÁFICO INTERACTIVO Y REACTIVO (FILTRADO EN CALIENTE)
     # ==========================================
     st.write("---")
     
-    # Control de estado interno para abrir/cerrar el panel de analítica
+    # Control de estado interno para abrir/cerrar el panel analítico
     if 'ver_historial' not in st.session_state:
         st.session_state.ver_historial = False
 
-    # Botón principal del sistema de consulta
-    if st.button("📊 Abrir Historial y Dashboard Analítico", key="btn_historial_principal"):
+    # Botón principal con nombre limpio
+    if st.button("📊 Historial", key="btn_historial_principal"):
         st.session_state.ver_historial = not st.session_state.ver_historial
         st.rerun()
 
-    # 🔓 Si el botón está activo, se despliega toda la analítica en tiempo real
+    # 🔓 Si el botón está activo, se despliega la analítica reactiva
     if st.session_state.ver_historial:
-        st.markdown("## 📊 Dashboard de Control de Inspecciones — 'Manos Seguras'")
+        st.markdown("## 📈 Centro de Analítica Operacional — 'Manos Seguras'")
         
         try:
-            # 1. TARJETAS KPI SUPERIORES (Métricas Rápidas)
-            if not df_historico_real.empty and "ESTADO" in df_historico_real.columns:
-                col_kpi1, col_kpi2, col_kpi3 = st.columns(3)
-                
-                # Mapeo de nombres de columna exactos basados en tu Sheets
-                col_estado_name = [c for c in df_historico_real.columns if 'ESTADO' in str(c).upper()][0]
-                col_tag_name_db = [c for c in df_historico_real.columns if 'TAG' in str(c).upper() or 'CÓDIGO' in str(c).upper()][0]
-                col_ope_name_db = [c for c in df_historico_real.columns if 'OPERADOR' in str(c).upper() or 'TÉCNICO' in str(c).upper()][0]
-                
-                total_inspecciones = len(df_historico_real)
-                total_aprobados = len(df_historico_real[df_historico_real[col_estado_name].astype(str).str.upper() == "APROBADO"])
-                total_rechazados = len(df_historico_real[df_historico_real[col_estado_name].astype(str).str.upper() == "RECHAZADO"])
-                
+            # 📥 1. DETECCIÓN DINÁMICA DE COLUMNAS EN LA BASE MAESTRA
+            col_estado = [c for c in df_historico_real.columns if 'ESTADO' in str(c).upper()][0]
+            col_tag = [c for c in df_historico_real.columns if 'TAG' in str(c).upper() or 'CÓDIGO' in str(c).upper()][0]
+            col_ope = [c for c in df_historico_real.columns if 'OPERADOR' in str(c).upper() or 'TÉCNICO' in str(c).upper()][0]
+
+            # ✂️ AISLAMIENTO DE DATOS: Tomamos estrictamente Operador, TAG y Estado
+            df_reducido = df_historico_real[[col_ope, col_tag, col_estado]].copy()
+
+            # CONTROLES DE FILTRADO (Van primero para que controlen todo el dashboard)
+            st.markdown("#### 🔍 Filtros de Búsqueda Dinámica")
+            col_f1, col_f2 = st.columns(2)
+            with col_f1:
+                f_tag = st.text_input("Filtrar por TAG de Equipo:", placeholder="Ej. HERR-AMO-046", key="f_tag").strip().upper()
+            with col_f2:
+                f_ope = st.text_input("Filtrar por Técnico / Persona:", placeholder="Ej. VÍCTOR", key="f_ope").strip().upper()
+
+            # --- APLICACIÓN DEL FILTRADO EN CALIENTE ---
+            df_filtrado = df_reducido.copy()
+            if f_tag:
+                df_filtrado = df_filtrado[df_filtrado[col_tag].astype(str).str.upper().str.contains(f_tag)]
+            if f_ope:
+                df_filtrado = df_filtrado[df_filtrado[col_ope].astype(str).str.upper().str.contains(f_ope)]
+            # --------------------------------------------
+
+            # 📊 2. CÁLCULO DE MÉTRICAS KPI (Calculadas estrictamente sobre la tabla filtrada)
+            total_f = len(df_filtrado)
+            if total_f > 0:
+                aprob_f = len(df_filtrado[df_filtrado[col_estado].astype(str).str.upper() == "APROBADO"])
+                rechaz_f = len(df_filtrado[df_filtrado[col_estado].astype(str).str.upper() == "RECHAZADO"])
+                porcentaje_seguro = (aprob_f / total_f) * 100
+
+                st.write("---")
+                col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
                 with col_kpi1:
-                    st.markdown(f'<div class="metric-card" style="border-top: 5px solid #002F6C;"><h3>{total_inspecciones}</h3><p>Total Inspecciones</p></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="metric-card" style="border-top: 5px solid #002F6C;"><h3>{total_f}</h3><p>Muestras Filtradas</p></div>', unsafe_allow_html=True)
                 with col_kpi2:
-                    st.markdown(f'<div class="metric-card" style="border-top: 5px solid #27AE60;"><h3 style="color:#27AE60;">{total_aprobados}</h3><p>Aprobadas (Seguras) ✔️</p></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="metric-card" style="border-top: 5px solid #27AE60;"><h3 style="color:#27AE60;">{aprob_f}</h3><p>Aprobadas ✔️</p></div>', unsafe_allow_html=True)
                 with col_kpi3:
-                    st.markdown(f'<div class="metric-card" style="border-top: 5px solid #CB6155;"><h3 style="color:#CB6155;">{total_rechazados}</h3><p>Rechazadas (Fallas) ❌</p></div>', unsafe_allow_html=True)
-            
-            st.write("---")
-            
-            # 2. SECCIÓN DE GRÁFICOS COMPARATIVOS (DASHBOARD VISUAL)
-            st.markdown("### 📈 Análisis de Comportamiento y Condiciones Críticas")
-            
-            if total_inspecciones > 0:
-                col_graph1, col_graph2 = st.columns(2)
+                    st.markdown(f'<div class="metric-card" style="border-top: 5px solid #CB6155;"><h3 style="color:#CB6155;">{rechaz_f}</h3><p>Rechazadas ❌</p></div>', unsafe_allow_html=True)
+                with col_kpi4:
+                    st.markdown(f'<div class="metric-card" style="border-top: 5px solid #F39C12;"><h3 style="color:#F39C12;">{porcentaje_seguro:.1f}%</h3><p>Índice Seguridad</p></div>', unsafe_allow_html=True)
+
+                st.write("---")
+
+                # 📈 3. GRÁFICOS INTERACTIVOS (Alimentados de la tabla filtrada)
+                st.markdown("### 📈 Gráficos de Comportamiento Filtrado")
+                c1, c2 = st.columns(2)
                 
-                with col_graph1:
-                    st.markdown("##### 👤 Estado de Herramientas por Técnico / Persona")
-                    # Agrupar datos por Operador y Estado
-                    df_ops = df_historico_real.groupby([col_ope_name_db, col_estado_name]).size().unstack(fill_value=0)
-                    # Asegurar que existan ambas columnas para evitar errores de graficación
-                    if "APROBADO" not in df_ops.columns: df_ops["APROBADO"] = 0
-                    if "RECHAZADO" not in df_ops.columns: df_ops["RECHAZADO"] = 0
-                    st.bar_chart(df_ops[["APROBADO", "RECHAZADO"]], color=["#27AE60", "#CB6155"])
-                    
-                with col_graph2:
-                    st.markdown("##### 🛠️ Índice de Condición de Riesgo por TAG")
-                    # Agrupar datos por TAG de equipo y Estado
-                    df_tags = df_historico_real.groupby([col_tag_name_db, col_estado_name]).size().unstack(fill_value=0)
-                    if "APROBADO" not in df_tags.columns: df_tags["APROBADO"] = 0
-                    if "RECHAZADO" not in df_tags.columns: df_tags["RECHAZADO"] = 0
-                    st.bar_chart(df_tags[["APROBADO", "RECHAZADO"]], color=["#27AE60", "#CB6155"])
+                with c1:
+                    st.markdown("##### 👤 Estado de Inspección por Persona")
+                    chart_data_ope = df_filtrado.groupby([col_ope, col_estado]).size().unstack(fill_value=0)
+                    for col in ["APROBADO", "RECHAZADO"]:
+                        if col not in chart_data_ope.columns: chart_data_ope[col] = 0
+                    st.bar_chart(chart_data_ope[["APROBADO", "RECHAZADO"]], color=["#27AE60", "#CB6155"])
+
+                with c2:
+                    st.markdown("##### 🛠️ Estado de Inspección por TAG")
+                    chart_data_tag = df_filtrado.groupby([col_tag, col_estado]).size().unstack(fill_value=0)
+                    for col in ["APROBADO", "RECHAZADO"]:
+                        if col not in chart_data_tag.columns: chart_data_tag[col] = 0
+                    st.bar_chart(chart_data_tag[["APROBADO", "RECHAZADO"]], color=["#27AE60", "#CB6155"])
+
+                # 📋 4. DATA FRAME VISUAL SIMPLIFICADO
+                st.write("---")
+                st.markdown("#### 📄 Registro de Datos Filtrados (Últimos movimientos primero)")
+                st.dataframe(
+                    df_filtrado.iloc[::-1], 
+                    use_container_width=True, 
+                    hide_index=True
+                )
+                st.caption(f"💡 Visualizando {total_f} registros que coinciden con los filtros aplicados.")
+                
             else:
-                st.info("📊 Los gráficos aparecerán automáticamente cuando se registren datos históricos.")
+                st.warning("🔎 No se encontraron registros que coincidan con los filtros aplicados.")
 
-            st.write("---")
-            
-            # 3. TABLA HISTÓRICA CON FILTROS DINÁMICOS EN CALIENTE
-            st.markdown("### 🔍 Buscador Avanzado de Registros")
-            col_bus1, col_bus2 = st.columns(2)
-            with col_bus1:
-                busqueda_tag = st.text_input("🔍 Filtrar por TAG / Código QR:", placeholder="Ej. HERR-AMO-046", key="search_tag").strip().upper()
-            with col_bus2:
-                busqueda_operador = st.text_input("👤 Filtrar por Nombre del Técnico:", placeholder="Ej. Víctor", key="search_operador").strip()
-
-            # Invertimos las filas para que lo más nuevo salga arriba de la lista
-            df_filtrado = df_historico_real.iloc[::-1]
-            
-            if busqueda_tag:
-                df_filtrado = df_filtrado[df_filtrado[col_tag_name_db].astype(str).str.upper().str.contains(busqueda_tag)]
-                
-            if busqueda_operador:
-                df_filtrado = df_filtrado[df_filtrado[col_ope_name_db].astype(str).str.upper().str.contains(busqueda_operador.upper())]
-
-            # Despliegue final de la tabla interactiva
-            if not df_filtrado.empty:
-                st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
-                st.caption(f"💡 Mostrando {len(df_filtrado)} registros encontrados en la base de datos de Google Sheets.")
-            else:
-                st.warning("⚠️ No se encontraron inspecciones con esos criterios de búsqueda.")
-                
         except Exception as e:
-            st.warning("🔄 Sincronizando datos con Google Sheets... Realice una inspección o espere unos segundos.")
+            st.info("📡 Sincronizando datos maestros... Realice una inspección para inicializar los gráficos.")
