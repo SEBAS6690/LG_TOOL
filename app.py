@@ -229,7 +229,6 @@ with col_manual:
     if codigo_manual:
         codigo_input = codigo_manual   
    
-
 # Procesamiento de la Herramienta Escaneada
 if codigo_input:
     if codigo_input in INVENTARIO_HERRAMIENTAS:
@@ -250,11 +249,13 @@ if codigo_input:
             
             checks_estados = []
             for idx, texto_punto in enumerate(tool_info["puntos"]):
-                chk = st.checkbox(texto_punto, key=f"chk_dinamico_{idx}")
+                # 💡 TRUCO CLAVE: Al incluir 'codigo_input' en la 'key', los checks se limpian 
+                # automáticamente cada vez que cambia el TAG de la herramienta escaneada.
+                chk = st.checkbox(texto_punto, key=f"chk_{codigo_input}_{idx}")
                 checks_estados.append((f"Punto {idx+1}", chk))
                 
             st.write("---")
-            comentarios = st.text_input("📝 Notas u observaciones adicionales:", placeholder="Ej. Carcasa limpia y dial de velocidad óptimo")
+            comentarios = st.text_input("📝 Notas u observaciones adicionales:", placeholder="Ej. Carcasa limpia y dial de velocidad óptimo", key=f"obs_{codigo_input}")
             
             st.markdown("### 💾 PASO 3: Conclusión del Registro")
             
@@ -272,32 +273,41 @@ if codigo_input:
                         st.balloons()
                     else:
                         estado_final = "RECHAZADO"
-                        fallas = [nombre for nombre, estado in checks_estados if not estado]
+                        fallas = [f"Punto {i+1}" for i, (_, estado) in enumerate(checks_estados) if not estado]
                         detalle_final = f"FALLA CRÍTICA EN: {', '.join(fallas)}. Obs: {comentarios}"
                         status_html = """<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4><p>Equipo fuera de estándar. Reportado a SSO.</p></div>"""
                     
-                    # CAMBIA ESTO CON LA URL DE TU PRIMER GOOGLE FORM (EL DE RESPUESTAS)
+                    # 🚨 1. TU URL DE GOOGLE FORMS (Debe terminar estrictamente en /formResponse)
                     URL_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSdX_XXXXXXXXXXXX_Pon_Tu_Codigo_Aqui_XXXXXXXXXXXX/formResponse"
                     
+                    # 🚨 2. TUS CODES 'entry' QUE OBTUVISTE CON F12 EN GOOGLE FORMS
                     datos_envio = {
-                        "entry.111111": fecha_hora, "entry.222222": operador,
-                        "entry.333333": codigo_input, "entry.444444": tool_info['nombre'],
-                        "entry.555555": tool_info['marca'], "entry.666666": tool_info['serial'],
-                        "entry.777777": estado_final, "entry.888888": detalle_final
+                        "entry.111111111": fecha_hora,             # Fecha
+                        "entry.222222222": operador,               # Operador / Técnico
+                        "entry.333333333": codigo_input,           # TAG
+                        "entry.444444444": tool_info['nombre'],    # Herramienta
+                        "entry.555555555": tool_info['marca'],     # Marca
+                        "entry.666666666": tool_info['serial'],    # Serial
+                        "entry.777777777": estado_final,           # Estado (APROBADO/RECHAZADO)
+                        "entry.888888888": detalle_final           # Detalle / Fallas
                     }
                     
                     try:
                         respuesta = requests.post(URL_FORM, data=datos_envio)
+                        
                         if respuesta.status_code == 200:
                             st.markdown(status_html, unsafe_allow_html=True)
                             st.success("💾 ¡Sincronizado con la base de datos de Google Sheets!")
+                            
+                            # Limpiar la memoria caché para forzar la lectura del nuevo registro en el Log Book
                             st.cache_data.clear()
+                            
+                            # Forzar recarga limpia de la app para vaciar los campos de texto
                             st.rerun()
+                        else:
+                            st.error(f"❌ Error al enviar. Google Forms respondió con el código: {respuesta.status_code}")
                     except Exception as e:
                         st.error(f"⚠️ Error de conexión: {e}")
-    else:
-        st.error(f"❌ Código '{codigo_input}' no encontrado en el Inventario. Registre el equipo en el panel izquierdo.")
-
 # ==========================================
 # 7. LOG BOOK DIGITAL — BITÁCORA EN TIEMPO REAL
 # ==========================================
