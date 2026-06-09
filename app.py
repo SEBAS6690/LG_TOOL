@@ -228,7 +228,7 @@ if codigo_input:
                         status_html = """<div class="danger-box"><h4>❌ ALERTA: HERRAMIENTA RETENIDA / BLOQUEADA</h4><p>Equipo fuera de estándar. Reportado a SSO.</p></div>"""
                     
                     # 🚨 REEMPLAZA ESTA URL CON TU NUEVA URL DE LA APLICACIÓN WEB DE GOOGLE DEL PASO 1
-                    URL_WEB_APP = "https://script.google.com/macros/s/AQUÍ_PEGA_TU_NUEVO_ID_DE_EXEC_DE_APPS_SCRIPT/exec"
+                    URL_WEB_APP = "https://script.google.com/macros/s/AKfycbyFvFDG3QFHJfSEgcIzAzVeNHbG1dCEXQQC0zzKgL9xiNH52sT3ag7cMa7K773jTlH34Q/exec"
                     
                     datos_envio = {
                         "fecha": str(fecha_hora),
