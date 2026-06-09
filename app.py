@@ -97,7 +97,7 @@ with st.sidebar:
         options=["-- Seleccione un Técnico --"] + LISTA_OPERADORES
     )
     
-    area_trabajo = st.selectbox("🏢 Área de Destino:", ["Contratista", "Electrico Planta Proc.", "Mecanicos Planta","Planta de pasta"])
+    area_trabajo = st.selectbox("🏢 Área de Destino:", ["Contratista", "Electrico Planta Proc.", "Mecanicos Planta","Planta de pasta","Mecanicos Planta","Operadores planta"])
     
     st.write("---")
     st.markdown("### 📊 Métricas de Turno Real")
