@@ -166,6 +166,8 @@ with st.sidebar:
         np3 = st.text_input("Punto 3:", placeholder="Ej. Ajuste de disco con llave", key="inv_p3")
         np4 = st.text_input("Punto 4:", placeholder="Ej. Interruptor de hombre muerto operativo", key="inv_p4")
         np5 = st.text_input("Punto 5:", placeholder="Ej. Uso de EPP específico (Caretas)", key="inv_p5")
+        np6 = st.text_input("Punto 6:", placeholder="Ej. Interruptor de hombre muerto operativo", key="inv_p6")
+        np7 = st.text_input("Punto 7:", placeholder="Ej. Uso de EPP específico (Caretas)", key="inv_p7")
         
         # Opciones de control del formulario en paralelo (Guardar / Limpiar)
         col_btn1, col_btn2 = st.columns(2)
@@ -200,8 +202,8 @@ with st.sidebar:
                     "p3": str(np3), 
                     "p4": str(np4), 
                     "p5": str(np5), 
-                    "p6": "", # Dejamos listos P6 y P7 en blanco por estructura de base de datos
-                    "p7": ""
+                    "p6": str(np6), # Dejamos listos P6 y P7 en blanco por estructura de base de datos
+                    "p7": str(np7)
                 }
                 
                 try:
