@@ -467,33 +467,33 @@ else:
             st.info("📡 Sincronizando datos maestros... Realice una inspección para inicializar los gráficos.")
 
 # =========================================================================
-    # 🖨️ AL FINAL ABSOLUTO: MÓDULO DE SELECCIÓN Y IMPRESIÓN MASIVA DE QR
+    # 🖨️ AL FINAL ABSOLUTO: MÓDULO DE SELECCIÓN E IMPRESIÓN MASIVA DE QR
     # =========================================================================
     st.write("---")
-    with st.expander("🖨️ Estación de Etiquetado Masivo: Imprimir Múltiples QRs en Ráfaga"):
+    with st.expander("🖨️ Estación de Etiquetado Masivo: Ver e Imprimir QRs en Ráfaga"):
         st.markdown("##### Panel de Pañol: Selección Múltiple de Etiquetas para Impresión Térmica")
         
         if HERRAMIENTAS_DB:
             lista_tags_disponibles = sorted(list(HERRAMIENTAS_DB.keys()))
             
-            # 1. Selector rápido: Permitir marcar todos de golpe o ninguno
+            # 1. Selector rápido para marcar todo el pañol de golpe
             col_sel1, col_sel2 = st.columns([1, 3])
             with col_sel1:
-                seleccionar_todos = st.checkbox("✅ Seleccionar Todos")
+                seleccionar_todos = st.checkbox("✅ Seleccionar Todo el Inventario", key="chk_select_all_final")
             
-            # 2. Multiselect interactivo de Streamlit
+            # 2. Multiselect interactivo reactivo
             default_selection = lista_tags_disponibles if seleccionar_todos else []
             tags_seleccionados = st.multiselect(
                 "Seleccione los TAGs que desea mandar a la ticketera:",
                 options=lista_tags_disponibles,
                 default=default_selection,
-                key="ms_impresion_masiva"
+                key="ms_impresion_masiva_final"
             )
             
             if tags_seleccionados:
                 st.success(f"📋 Elementos listos en cola de impresión: **{len(tags_seleccionados)} herramientas**.")
                 
-                # Construimos la estructura de datos que se enviará al bloque de impresión
+                # Armamos el lote replicando la fórmula dinámica de la API por cada TAG marcado
                 cola_impresion = []
                 for tag in tags_seleccionados:
                     cola_impresion.append({
@@ -502,40 +502,65 @@ else:
                         "url_qr": f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={tag}"
                     })
                 
+                # Muestra una pequeña vista previa en miniatura de los primeros elementos seleccionados
+                st.markdown("**👀 Vista previa del lote (Primeros elementos):**")
+                cols_preview = st.columns(min(len(cola_impresion), 5))
+                for i, item in enumerate(cola_impresion[:5]):
+                    with cols_preview[i]:
+                        st.image(item["url_qr"], caption=item["tag"], width=80)
+                
+                st.write("")
                 col_btn_action, _ = st.columns([1, 2])
                 with col_btn_action:
-                    # Botón maestro de impresión en bloque
-                    if st.button("🖨️ Imprimir Lote Seleccionado", key="btn_execute_print_masivo", use_container_width=True):
+                    # Botón maestro de ejecución en bloque con sincronización JS
+                    if st.button("🖨️ Imprimir Lote Seleccionado", key="btn_execute_print_masivo_final", use_container_width=True):
                         
-                        # 🧠 LÓGICA JAVASCRIPT AVANZADA: Genera un documento único con saltos de página CSS (page-break-after)
-                        # Esto hace que cada QR salga en un ticket físico independiente sin colgar la ticketera
+                        # Generamos los divs independientes acoplando la regla de corte térmico CSS
                         html_tickets = ""
                         for item in cola_impresion:
                             html_tickets += f"""
                             <div class="ticket">
-                                <img src="{item['url_qr']}">
+                                <img src="{item['url_qr']}" class="qr-img">
                                 <p>TAG: {item['tag']}<br>{item['nombre']}</p>
                             </div>
                             """
                         
+                        # 🧠 BLINDAJE JAVASCRIPT: Monitorea que cada QR esté en caché antes de llamar al spooler
                         js_masivo = f"""
                         <script>
-                            var winMasiva = window.open('', '_blank', 'width=350,height=500');
+                            var winMasiva = window.open('', '_blank', 'width=450,height=550');
                             winMasiva.document.write('<html><head><title>Impresión Masiva Lundin</title>');
                             winMasiva.document.write('<style>');
                             winMasiva.document.write('body {{ text-align: center; margin: 0; padding: 0; }}');
-                            winMasiva.document.write('.ticket {{ padding: 15px; page-break-after: always; text-align: center; }}');
-                            winMasiva.document.write('img {{ width: 160px; height: 160px; }}');
-                            winMasiva.document.write('p {{ font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; margin-top: 6px; line-height: 1.3; }}');
+                            winMasiva.document.write('.ticket {{ padding: 20px; page-break-after: always; text-align: center; display: block; }}');
+                            winMasiva.document.write('img {{ width: 160px; height: 160px; display: inline-block; }}');
+                            winMasiva.document.write('p {{ font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; margin-top: 8px; line-height: 1.4; color: #000; }}');
                             winMasiva.document.write('</style></head><body>');
                             winMasiva.document.write('{html_tickets}');
-                            winMasiva.document.write('<script>window.onload = function() {{ window.print(); window.close(); }}</script>');
                             winMasiva.document.write('</body></html>');
                             winMasiva.document.close();
+
+                            // Evaluador síncrono de carga de imágenes
+                            winMasiva.onload = function() {{
+                                var imagenes = winMasiva.document.querySelectorAll('.qr-img');
+                                var promesas = Array.from(imagenes).map(function(img) {{
+                                    if (img.complete) return Promise.resolve();
+                                    return new Promise(function(resolve) {{ img.onload = resolve; img.onerror = resolve; }});
+                                }});
+
+                                // Ejecutar ventana de impresión sólo cuando el búfer gráfico esté al 100%
+                                Promise.all(promesas).then(function() {{
+                                    setTimeout(function() {{
+                                        winMasiva.focus();
+                                        winMasiva.print();
+                                        winMasiva.close();
+                                    }}, 300); // Pequeño delay de asentamiento para hardware de impresión
+                                }});
+                            }};
                         </script>
                         """
                         st.components.v1.html(js_masivo, height=0, width=0)
             else:
-                st.info("💡 Marque la casilla 'Seleccionar Todos' o elija herramientas específicas del menú desplegable.")
+                st.info("💡 Active la casilla 'Seleccionar Todo el Inventario' o use el buscador para armar su lote de impresión.")
         else:
             st.info("📌 Base de datos de inventario en proceso de sincronización.")
